@@ -17,9 +17,9 @@ using Box_Task_Manager.View.TaskEntries;
 namespace Box_Task_Manager.View {
     public class Main : Base {
         private static object Sync = null;
-        private const string _ClientID = "24fhrfjv52t2uumxkzdu4jwcbp3potk5";
-        private const string _ClientSecret = "";
-        public Uri RedirectUri = new Uri(@"https://taskmanager.energyservices.org/");
+        private static string _ClientID = APIConfiguration.Instance.Client_ID;
+        private static string _ClientSecret = APIConfiguration.Instance.Client_Secret;
+        public Uri RedirectUri = new Uri(APIConfiguration.Instance.Redirect_URL);
 
         public static BoxConfig Config { get; set; }
         public static BoxClient Client { get; set; }
@@ -82,7 +82,7 @@ namespace Box_Task_Manager.View {
             }
         }
         public Main() {
-            //Session = null;
+            Session = null;
             OAuthSession session = Session; // use appsettings
 
             Config = new BoxConfig(_ClientID, _ClientSecret, RedirectUri);

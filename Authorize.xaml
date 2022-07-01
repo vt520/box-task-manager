@@ -1,0 +1,13 @@
+﻿<UserControl 
+    x:Class="Box_Task_Manager.Authorize"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Box_Task_Manager"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Width="400" Height="600">
+    <Grid>
+        <WebView Name="browser" NavigationCompleted="browser_NavigationCompleted" NavigationFailed="browser_NavigationFailed" NavigationStarting="browser_NavigationStarting"/>
+    </Grid>
+</UserControl>
