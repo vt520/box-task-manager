@@ -130,6 +130,9 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="View\APIConfiguration.cs" />
+    <Compile Include="View\Assignment.cs" />
+    <Compile Include="View\Assignments\Complete.cs" />
+    <Compile Include="View\Assignments\Review.cs" />
     <Compile Include="View\Base.cs" />
     <Compile Include="View\Command.cs" />
     <Compile Include="View\IAPIConfiguration.cs" />

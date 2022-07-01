@@ -82,7 +82,7 @@ namespace Box_Task_Manager.View {
             }
         }
         public Main() {
-            Session = null;
+            //Session = null;
             OAuthSession session = Session; // use appsettings
 
             Config = new BoxConfig(_ClientID, _ClientSecret, RedirectUri);
@@ -123,34 +123,27 @@ namespace Box_Task_Manager.View {
                 foreach (BoxTask task in file_tasks.Entries) {
                     bool task_completed = task.IsCompleted;
                     bool all_complete = (task.CompletionRule == BoxCompletionRule.all_assignees);
-                    bool assigned_to_me = false;
+                    BoxTaskAssignment assigned_to_me = null;
                     if (task_completed) continue;
 
 
                     BoxCollection<BoxTaskAssignment> task_assignments = task.TaskAssignments;
-                    foreach (BoxTaskAssignment assignment in task_assignments.Entries) {
-                        task_completed |= assignment.Status != "incomplete";
-                        all_complete &= assignment.Status != "incomplete";
-                        if (assignment.AssignedTo.Id == boxUser.Id) assigned_to_me = true;
+                    foreach (BoxTaskAssignment task_assignment in task_assignments.Entries) {
+                        task_completed |= task_assignment.Status != "incomplete";
+                        all_complete &= task_assignment.Status != "incomplete";
+                        if (task_assignment.AssignedTo.Id == boxUser.Id) assigned_to_me = task_assignment;
                     }
 
-                    if (!assigned_to_me) continue;
+                    if (assigned_to_me is null) continue;
                     if (all_complete) continue;
                     if (task.CompletionRule == BoxCompletionRule.any_assignee && task_completed) continue;
 
                     if (Tasks.Where(item => (item.Task.Id == task.Id)).Count() > 0) continue; // Linq No Dupe id
-                
+
                     // this is fugly
-                        TaskEntry entry;
-                    if(task.Action == "review") {
-                        entry = new ApprovalTaskEntry {
-                            Task = task
-                        };
-                    } else {
-                        entry = new SimpleTaskEntry {
-                            Task = task
-                        };
-                    }
+                    Assignment assignment =Assignment.InstanceFor(assigned_to_me, task.Action);
+
+                    TaskEntry entry = new TaskEntry {  Task = task, Assignment = assignment};
                     this.Tasks.Add(entry);
                 }
             }

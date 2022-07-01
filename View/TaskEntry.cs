@@ -12,6 +12,15 @@ using Windows.UI.Xaml.Media.Imaging;
 
 namespace Box_Task_Manager.View {
     public class TaskEntry : Base {
+        protected Assignment _Assignment;
+        public Assignment Assignment {
+            get { return _Assignment; }
+            set {
+                if (_Assignment == value) return;
+                _Assignment = value;
+                OnPropertyChangedAsync();
+            }
+        }
         protected ImageSource _Icon;
         public ImageSource Icon { 
             get {
