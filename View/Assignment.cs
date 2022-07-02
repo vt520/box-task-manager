@@ -15,14 +15,27 @@ namespace Box_Task_Manager.View {
                 if (_BoxTaskAssignment == value) return;
                 _BoxTaskAssignment = value;
                 OnPropertyChangedAsync();
+                OnPropertyChangedAsync(nameof(Actions));
             }
         }
         public List<Command> Actions {  
             get {
-                if(this is Complete assignment_complete) {
-
+                if (this is Complete assignment_complete) {
+                    return new List<Command> {
+                        new Command(async _ => {
+                            assignment_complete.CompleteTask();
+                        }) {Name = "Complete Task"}
+                    };
                 } else if (this is Review assignment_review) {
+                    return new List<Command> {
+                        new Command(async _ => {
+                            assignment_review.AcceptTask();
+                        }) { Name = "Accept Document" },
 
+                        new Command(async _ => {
+                            assignment_review.RejectTask();
+                        }) { Name = "Reject Document" }
+                    };
                 }
                 return null;
             } 
@@ -32,7 +45,7 @@ namespace Box_Task_Manager.View {
                 case "review": 
                     return new Review() { BoxTaskAssignment = assignment };
                 case "complete":
-                    return new Review() { BoxTaskAssignment = assignment };
+                    return new Complete() { BoxTaskAssignment = assignment };
                 default:
                     throw new EntryPointNotFoundException();
             }

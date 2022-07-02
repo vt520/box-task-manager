@@ -51,7 +51,7 @@ namespace Box_Task_Manager
             if (!_Main.Ready) {
                 oauth.GetAuthCode(Main.Config.AuthCodeUri, Main.Config.RedirectUri);
             } else {
-                await _Main.UpdateTaskList();
+                _Main.UpdatingTasks = true;
             }
         }
 
@@ -76,6 +76,35 @@ namespace Box_Task_Manager
             if (e.ClickedItem is TaskEntry entry) {
                 Locator.TaskDetail = entry;
                 Frame.Navigate(typeof(DocumentView));
+            }
+        }
+
+        private async void Box_Click(object sender, RoutedEventArgs e) {
+            if(e.OriginalSource is Button button) {
+                if(button.DataContext is TaskEntry task) {
+                    _ = await Windows.System.Launcher.LaunchUriAsync(
+                        new Uri($"https://app.box.com/file/{task.Task.Item.Id}")
+                    );
+                }
+            }
+            
+        }
+
+        private void Comments_Click(object sender, RoutedEventArgs e) {
+            if (e.OriginalSource is Button button) {
+                if (button.DataContext is TaskEntry entry) {
+                    Locator.TaskDetail = entry;
+                    Frame.Navigate(typeof(Comments));
+                }
+            }
+        }
+
+        private void Review_Click(object sender, RoutedEventArgs e) {
+            if(e.OriginalSource is Button button) {
+                if(button.DataContext is TaskEntry entry ) {
+                    Locator.TaskDetail = entry;
+                    Frame.Navigate(typeof(DocumentView));
+                }
             }
         }
     }

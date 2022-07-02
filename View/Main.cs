@@ -13,13 +13,17 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Windows.Storage;
 using Box_Task_Manager.View.TaskEntries;
+using System.Threading;
+using Windows.UI.Xaml;
 
 namespace Box_Task_Manager.View {
     public class Main : Base {
+        private DispatcherTimer Timer = new DispatcherTimer() { Interval = new TimeSpan(0, 0, 60) };
         private static object Sync = null;
         private static string _ClientID = APIConfiguration.Instance.Client_ID;
         private static string _ClientSecret = APIConfiguration.Instance.Client_Secret;
         public Uri RedirectUri = new Uri(APIConfiguration.Instance.Redirect_URL);
+        private static Thread _UpdatingTasks;
 
         public static BoxConfig Config { get; set; }
         public static BoxClient Client { get; set; }
@@ -82,7 +86,9 @@ namespace Box_Task_Manager.View {
             }
         }
         public Main() {
-            //Session = null;
+            Timer.Tick += Timer_Tick;
+
+            Session = null;
             OAuthSession session = Session; // use appsettings
 
             Config = new BoxConfig(_ClientID, _ClientSecret, RedirectUri);
@@ -106,6 +112,8 @@ namespace Box_Task_Manager.View {
                 Sync = new object(); 
             else return;
 
+            
+
             BoxUser boxUser = await Client.UsersManager.GetCurrentUserInformationAsync();
             Status = "Reading Root Folder";
             (Queue<BoxItem> files, Queue<BoxItem> folders) = await ReadFolder("0");
@@ -124,18 +132,24 @@ namespace Box_Task_Manager.View {
                     bool task_completed = task.IsCompleted;
                     bool all_complete = (task.CompletionRule == BoxCompletionRule.all_assignees);
                     BoxTaskAssignment assigned_to_me = null;
-                    if (task_completed) continue;
-
-
-                    BoxCollection<BoxTaskAssignment> task_assignments = task.TaskAssignments;
-                    foreach (BoxTaskAssignment task_assignment in task_assignments.Entries) {
-                        task_completed |= task_assignment.Status != "incomplete";
-                        all_complete &= task_assignment.Status != "incomplete";
-                        if (task_assignment.AssignedTo.Id == boxUser.Id) assigned_to_me = task_assignment;
+                    if (!task_completed) {
+                        BoxCollection<BoxTaskAssignment> task_assignments = task.TaskAssignments;
+                        foreach (BoxTaskAssignment task_assignment in task_assignments.Entries) {
+                            task_completed |= task_assignment.Status != "incomplete";
+                            all_complete &= task_assignment.Status != "incomplete";
+                            if (task_assignment.AssignedTo.Id == boxUser.Id) assigned_to_me = task_assignment;
+                        }
+                    }
+                    if (all_complete | task_completed) {
+                        List<TaskEntry> stale_entries = Tasks.Where(item => (item.Task.Id == task.Id)).ToList();
+                        foreach (TaskEntry stale_entry in stale_entries) {
+                            Tasks.Remove(stale_entry);
+                        }
+                        continue;
                     }
 
+                    
                     if (assigned_to_me is null) continue;
-                    if (all_complete) continue;
                     if (task.CompletionRule == BoxCompletionRule.any_assignee && task_completed) continue;
 
                     if (Tasks.Where(item => (item.Task.Id == task.Id)).Count() > 0) continue; // Linq No Dupe id
@@ -149,6 +163,7 @@ namespace Box_Task_Manager.View {
             }
             Status = $"Completed";
             Sync = null;
+            UpdatingTasks = false;
         }
 
         private async Task<(Queue<BoxItem>, Queue<BoxItem>)> ReadFolder(string folder_id = "0") {
@@ -169,10 +184,10 @@ namespace Box_Task_Manager.View {
         }
         public async Task Init(string access_code) {
             await Client.Auth.AuthenticateAsync(access_code);
-            Command after_auth = new Command(async _ => {
+            /*Command after_auth = new Command(async _ => {
                 await UpdateTaskList();
             });
-            Execute(after_auth);
+            Execute(after_auth);*/
             Session = Client.Auth.Session;
             Ready = true;
         }
@@ -189,14 +204,32 @@ namespace Box_Task_Manager.View {
                 return Client.Auth.Session.ExpiresIn > 0;
             }
         }
+
+        private bool _TaskListUpdating;
+        public bool UpdatingTasks {
+            get {
+                return _TaskListUpdating;
+            }
+            set {
+                if(_TaskListUpdating == value) return;
+                _TaskListUpdating = value;
+                OnPropertyChangedAsync();
+                if (value) UpdateTaskList();
+            }
+        }
         private bool _Ready = false;
         public bool Ready { 
             get => _Ready; 
             set {
                 if (_Ready == value) return;
-                _Ready = value;
+                UpdatingTasks = _Ready = value;
+                if (value) Timer.Start(); else Timer.Stop();
                 OnPropertyChangedAsync();
             } 
+        }
+
+        private void Timer_Tick(object sender, object e) {
+            UpdatingTasks = true;
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using Box_Task_Manager.View;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,35 +19,17 @@ namespace Box_Task_Manager {
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
     /// </summary>
-    public sealed partial class DocumentView : Page {
-        public DocumentView() {
+    public sealed partial class Comments : Page {
+        public Comments() {
             this.InitializeComponent();
         }
 
-        private void Page_Loaded(object sender, RoutedEventArgs e) {
-            
-
-
+        private void Details_Click(object sender, RoutedEventArgs e) {
+            Frame.Navigate(typeof(DocumentView));
         }
 
-        private void Page_Unloaded(object sender, RoutedEventArgs e) {
-
-        }
-
-        private void Button_Click(object sender, RoutedEventArgs e) {
+        private void Tasks_Click(object sender, RoutedEventArgs e) {
             Frame.Navigate(typeof(MainPage));
-        }
-
-        private void Comments_Click(object sender, RoutedEventArgs e) {
-            Frame.Navigate(typeof(Comments));
-        }
-
-        private void Action_Click(object sender, RoutedEventArgs e) {
-            if(e.OriginalSource is Button button) {
-                if (button.DataContext is Command command) {
-                    command.Execute(this);
-                }
-            }
         }
     }
 }

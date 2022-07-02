@@ -71,7 +71,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Row="0" Grid.Column="0">
-                                            <TextBlock FontWeight="Bold" FontSize="20" Margin="0,20,0,0" Text="{Binding Task.Message}"/>
+                                            <TextBlock FontWeight="Bold" FontSize="20" Margin="0,20,0,0" TextWrapping="Wrap" Text="{Binding Task.Message}"/>
                                             <Border BorderThickness="0,0,0,1" Margin="0,0,0,10" BorderBrush="Black" Padding="0">
                                                 <TextBlock FontStyle="Italic" TextAlignment="Right" Text="{Binding Task.CreatedBy.Name}" />
                                             </Border>
@@ -97,9 +97,9 @@
                                     </Grid>
 
                                     <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right">
-                                        <Button Content="Review"></Button>
-                                        <Button Content="Confirm Completion"></Button>
-                                        <Button Content="Open In Box" Click="Button_Click_1"></Button>
+                                        <Button Name="Review" Content="Review" Click="Review_Click"></Button>
+                                        <Button Name="Comments" Content="Comments" Margin="5,0,5,0" Click="Comments_Click"></Button>
+                                        <Button Name="Box" Content="Open In Box" Click="Box_Click"></Button>
                                     </StackPanel>
                                 </Grid>
                             </Grid>

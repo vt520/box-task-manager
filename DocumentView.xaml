@@ -34,18 +34,24 @@
         </ScrollViewer>
         <Grid Grid.Row="2" Grid.Column="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition/>
-                <ColumnDefinition/>
+                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition/>
             </Grid.RowDefinitions>
-            <Button Grid.Column="0" Click="Button_Click" Content="Return to List"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Column="1">
-                <Button Content="Approve"/>
-                <Button Content="Reject"/>
-                <Button Content="Acknowledge"/>
+            <Button Grid.Column="0" Click="Button_Click" Content="Return to List" Margin="15,0,0,0"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"  Grid.Column="1">
+                <GridView ItemsSource="{Binding Assignment.Actions}" Margin="3">
+                    <GridView.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding Name}" Click="Action_Click"/>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                </GridView>
+                <Button Name="Comments" Content="Comments" Margin="0,0,0,0" Click="Comments_Click"></Button>
             </StackPanel>
+            
         </Grid>
         
     </Grid>
