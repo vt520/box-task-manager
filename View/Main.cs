@@ -155,6 +155,9 @@ namespace Box_Task_Manager.View {
                     if (assigned_to_me is null) continue;
                     if (task.CompletionRule == BoxCompletionRule.any_assignee && task_completed) continue;
                     IEnumerable<TaskEntry> MatchingTasks = Tasks.Where(item => (item.Task.Id == task.Id));
+                    foreach(TaskEntry existing in MatchingTasks) {
+                        existing.UpdateAll();
+                    }
                     if (MatchingTasks?.Count() > 0) continue; // Linq No Dupe id
 
                     // this is fugly
