@@ -88,7 +88,7 @@ namespace Box_Task_Manager.View {
         public Main() {
             Timer.Tick += Timer_Tick;
 
-            Session = null;
+            //Session = null;
             OAuthSession session = Session; // use appsettings
 
             Config = new BoxConfig(_ClientID, _ClientSecret, RedirectUri);
@@ -140,6 +140,9 @@ namespace Box_Task_Manager.View {
                             if (task_assignment.AssignedTo.Id == boxUser.Id) assigned_to_me = task_assignment;
                         }
                     }
+                    if(!(assigned_to_me is null)) {
+
+                    }
                     if (all_complete | task_completed) {
                         List<TaskEntry> stale_entries = Tasks.Where(item => (item.Task.Id == task.Id)).ToList();
                         foreach (TaskEntry stale_entry in stale_entries) {
@@ -151,8 +154,8 @@ namespace Box_Task_Manager.View {
                     
                     if (assigned_to_me is null) continue;
                     if (task.CompletionRule == BoxCompletionRule.any_assignee && task_completed) continue;
-
-                    if (Tasks.Where(item => (item.Task.Id == task.Id)).Count() > 0) continue; // Linq No Dupe id
+                    IEnumerable<TaskEntry> MatchingTasks = Tasks.Where(item => (item.Task.Id == task.Id));
+                    if (MatchingTasks?.Count() > 0) continue; // Linq No Dupe id
 
                     // this is fugly
                     Assignment assignment =Assignment.InstanceFor(assigned_to_me, task.Action);
