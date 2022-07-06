@@ -23,10 +23,10 @@
 
         <ScrollViewer Grid.Row="1"
                        VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" HorizontalAlignment="Center">
-            <GridView ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False" MaxWidth="600">
+            <GridView ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False" MaxWidth="600" Background="{StaticResource ButtonBackgroundThemeBrush}">
                 <GridView.ItemTemplate>
                     <DataTemplate>
-                        <Image Stretch="UniformToFill" Source="{Binding}" Width="{Binding Value,ElementName=Scale}" Margin="5">
+                        <Image Stretch="UniformToFill" Source="{Binding}" Width="{Binding Value,ElementName=Scale}" Margin="5" Clip="">
                         </Image>
                     </DataTemplate>
                 </GridView.ItemTemplate>

@@ -19,6 +19,9 @@ namespace Box_Task_Manager.View {
             get { return _Assignment; }
             set {
                 if (_Assignment == value) return;
+                if (_Assignment?.BoxTaskAssignment.Id == value.BoxTaskAssignment.Id) {
+                    if (_Assignment.BoxTaskAssignment.Status == value.BoxTaskAssignment.Status) return;
+                }
                 _Assignment = value;
                 OnPropertyChangedAsync();
             }
@@ -120,12 +123,29 @@ namespace Box_Task_Manager.View {
             if (stale_comments) Comments = current_comments;
         }
 
+        public async Task UpdateTask() {
+            Task = await Main.Client.TasksManager.GetTaskAsync(Task.Id);
+        }
         public void UpdateAll() {
+            UpdateAssignment();
             UpdateIcon();
             UpdateComments();
             UpdatePreview();
         }
+
+        private async void UpdateAssignment() {
+            BoxUser user = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
+            foreach(BoxTaskAssignment assignment in Task.TaskAssignments.Entries) {
+                if (assignment.AssignedTo.Id == user.Id) {
+                    
+                    Assignment = Assignment.InstanceFor(assignment, Task.Action);
+                    return;
+                }
+            }
+        }
+
         private async void UpdateIcon() {
+            if (!(_Icon is null)) return;
 
             Stream stream = await Main.Client.FilesManager.GetThumbnailAsync(Task.Item.Id, minHeight: 256);
             MemoryStream buffer = new MemoryStream();
@@ -139,6 +159,7 @@ namespace Box_Task_Manager.View {
         }
 
         protected async virtual void UpdatePreview() {
+            if (!(_Preview is null)) return;
             BoxRepresentationRequest pdf_request = new BoxRepresentationRequest {
                 FileId = Task.Item.Id,
                 XRepHints = "[pdf]"
@@ -180,6 +201,20 @@ namespace Box_Task_Manager.View {
                 _Comments = value;
                 OnPropertyChangedAsync();
             }
+        }
+
+        public bool Completed { 
+            get {
+                if (Task.IsCompleted) return true;
+                bool all_completed = true;
+                bool partial_completed = false;
+
+                foreach(BoxTaskAssignment assignment in Task.TaskAssignments.Entries) {
+                    all_completed &= assignment.Status != "incomplete";
+                    partial_completed |= assignment.Status != "incomplete";
+                }
+                return all_completed | (partial_completed && Task.CompletionRule == BoxCompletionRule.any_assignee);
+            } 
         }
     }
 }
