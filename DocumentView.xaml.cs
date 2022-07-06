@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.ApplicationModel.Core;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -39,16 +41,20 @@ namespace Box_Task_Manager {
             Frame.Navigate(typeof(MainPage));
         }
 
-        private void Comments_Click(object sender, RoutedEventArgs e) {
-            Frame.Navigate(typeof(Comments));
-        }
-
-        private void Action_Click(object sender, RoutedEventArgs e) {
-            if(e.OriginalSource is Button button) {
+        private void Action_Click(object sender, RoutedEventArgs e)  {
+            if (e.OriginalSource is Button button) {
                 if (button.DataContext is Command command) {
-                    command.Execute(this);
+                    ActAndNavigate(command);
                 }
             }
+            
+        }
+        private async void ActAndNavigate(Command action) {
+            await CoreApplication.MainView.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => {
+                Frame.Navigate(typeof(MainPage));
+                action.Execute(this);
+
+            });
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿<Page
+﻿<Page x:Name="page"
     x:Class="Box_Task_Manager.DocumentView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,31 +8,33 @@
     mc:Ignorable="d"
     Loaded="Page_Loaded"
     Unloaded="Page_Unloaded"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     DataContext="{Binding TaskDetail, Source={StaticResource Locator}}">
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="20"/>
             <RowDefinition/>
+            <RowDefinition Height="40"/>
             <RowDefinition Height="50"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="600"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition />
         </Grid.ColumnDefinitions>
-        <ScrollViewer  Grid.Row="1" Grid.Column="1" >
-            <ListView ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <Image Source="{Binding}" MaxHeight="1000" Margin="5"/>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
 
-            </ListView>
+        <ScrollViewer Grid.Row="1"
+                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" HorizontalAlignment="Center">
+            <GridView ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False" MaxWidth="600">
+                <GridView.ItemTemplate>
+                    <DataTemplate>
+                        <Image Stretch="UniformToFill" Source="{Binding}" Width="{Binding Value,ElementName=Scale}" Margin="5">
+                        </Image>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
         </ScrollViewer>
-        <Grid Grid.Row="2" Grid.Column="1">
+        <Slider Maximum="1000" Value="500" Minimum="200" Name="Scale" Grid.Column="1" Grid.Row="2" Margin="5"/>
+
+        <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="120"/>
                 <ColumnDefinition Width="*"/>
@@ -49,10 +51,7 @@
                         </DataTemplate>
                     </GridView.ItemTemplate>
                 </GridView>
-                <Button Name="Comments" Content="Comments" Margin="0,0,0,0" Click="Comments_Click"></Button>
             </StackPanel>
-            
         </Grid>
-        
     </Grid>
 </Page>

@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Windows.Data.Pdf;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
@@ -96,10 +98,26 @@ namespace Box_Task_Manager.View {
                 UpdateAll();
             }
         }
-
         public async void UpdateComments() {
-            Comments = await Main.Client.FilesManager.GetCommentsAsync(Task.Item.Id);
 
+            BoxCollection<BoxComment> current_comments  = await Main.Client.FilesManager.GetCommentsAsync(Task.Item.Id);
+            if (Comments is null) {
+                Comments = current_comments;
+                return;
+            }
+            bool stale_comments = false;
+
+            foreach (BoxComment comment in current_comments.Entries) {
+                IEnumerable<BoxComment> existing_comments = Comments.Entries.Where(item => (item.Id == comment.Id));
+                if (existing_comments.Count() > 0) {
+                    // merge comment
+                    BoxComment existing_comment = existing_comments.First();
+
+                    if (existing_comment.Message == comment.Message) continue;
+                }
+                stale_comments = true;
+            }
+            if (stale_comments) Comments = current_comments;
         }
 
         public void UpdateAll() {

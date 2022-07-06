@@ -20,6 +20,8 @@ using Box.V2.Services;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using Box_Task_Manager.View;
+using Windows.UI.ViewManagement;
+using Box.V2.Models;
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
 namespace Box_Task_Manager
@@ -35,8 +37,7 @@ namespace Box_Task_Manager
         {
             
             this.InitializeComponent();
-            
-            _Main = Locator.Main;
+                _Main = Locator.Main;
             oauth.Authorized += async (sender, evt) => {
                 if(sender is Authorize authorize) {
                     await _Main.Init(authorize.AuthCode);
@@ -92,9 +93,20 @@ namespace Box_Task_Manager
 
         private void Comments_Click(object sender, RoutedEventArgs e) {
             if (e.OriginalSource is Button button) {
+                //if()
+                if(button.Parent is Panel parent) {
+                    while(parent is Panel) {
+                        if(parent.FindName("CommentEntry") is Popup entry_area) { 
+                            entry_area.IsOpen = !entry_area.IsOpen;
+                            break;
+                        }
+                        parent = parent.Parent as Panel;
+                    }
+                }
                 if (button.DataContext is TaskEntry entry) {
                     Locator.TaskDetail = entry;
-                    Frame.Navigate(typeof(Comments));
+                    //AddComment.IsOpen = true;
+                    //Frame.Navigate(typeof(Comments));
                 }
             }
         }
@@ -104,6 +116,49 @@ namespace Box_Task_Manager
                 if(button.DataContext is TaskEntry entry ) {
                     Locator.TaskDetail = entry;
                     Frame.Navigate(typeof(DocumentView));
+                }
+            }
+        }
+
+        private async void Add_Click(object sender, RoutedEventArgs e) {
+            if (e.OriginalSource is Button button) {
+                if (button.Parent is Panel parent) {
+                    while (parent is Panel) {
+                        if (parent.FindName("CommentEntry") is Popup entry_area) {
+                            if (entry_area.FindName("NewComment") is TextBox textBox) {
+
+                                BoxComment newComment = await Main.Client.CommentsManager.AddCommentAsync(new BoxCommentRequest {
+                                    Item = new BoxRequestEntity {
+                                        Id = Locator.TaskDetail.Task.Item.Id,
+                                        Type = BoxType.file
+                                    },
+                                    Message = textBox.Text
+                                }); ;
+                                if(newComment?.Id is null) { }
+                                textBox.Text = string.Empty;
+                            }
+                            entry_area.IsOpen = false;
+                            break;
+                        }
+                        parent = parent.Parent as Panel;
+                    }
+                }
+            }
+        }
+
+        private void Cancel_Click(object sender, RoutedEventArgs e) {
+            if (e.OriginalSource is Button button) {
+                if (button.Parent is Panel parent) {
+                    while (parent is Panel) {
+                        if (parent.FindName("CommentEntry") is Popup entry_area) {
+                            if(entry_area.FindName("NewComment") is TextBox textBox) {
+                                textBox.Text = string.Empty;
+                            }
+                            entry_area.IsOpen = false;
+                            break;
+                        }
+                        parent = parent.Parent as Panel;
+                    }
                 }
             }
         }

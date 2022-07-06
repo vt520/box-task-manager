@@ -12,10 +12,13 @@
     <Page.Resources>
         <local:NonZeroValueConverter x:Key="ISNonZero"/>
         <DataTemplate x:Key="commentsDisplay">
-            <StackPanel Padding="5" Margin="5" BorderBrush="DarkSlateGray" BorderThickness="1">
-                <TextBlock Grid.Row="0" Text="{Binding Message}"/>
+            <StackPanel Padding="5" Margin="5" BorderBrush="{StaticResource ButtonBackgroundThemeBrush}" CornerRadius="5" BorderThickness="1">
+                <Border BorderBrush="{StaticResource ButtonBackgroundThemeBrush}" BorderThickness="0,0,0,1">
+                    <TextBlock Grid.Row="0" Style="{StaticResource BodyTextBlockStyle}" Text="{Binding Message}" TextWrapping="Wrap"/>
+                </Border>
+
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <TextBlock Grid.Row="1" HorizontalAlignment="Right" Text="{Binding CreatedBy.Name}" FontWeight="SemiBold" FontStyle="Italic"/>
+                    <TextBlock Grid.Row="1" Style="{StaticResource CaptionTextBlockStyle}" HorizontalAlignment="Right" Text="{Binding CreatedBy.Name}" FontWeight="SemiBold" FontStyle="Italic"/>
                 </StackPanel>
             </StackPanel>
         </DataTemplate>
@@ -30,15 +33,13 @@
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="600"/>
-            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <ScrollViewer Grid.Row="1" Grid.Column="1">
+        <ScrollViewer Grid.Row="1">
             <StackPanel>
                 <ListView ItemsSource="{Binding Tasks}" HorizontalAlignment="Stretch" SelectionChanged="ListView_SelectionChanged" SelectionMode="None" IsItemClickEnabled="True" ItemClick="ListView_ItemClick">
                     <ListView.ItemTemplate>
                         <DataTemplate>
-                            <Grid BorderBrush="DarkGray" BorderThickness="1">
+                            <Grid BorderBrush="{StaticResource ButtonBorderThemeBrush}" CornerRadius="3" BorderThickness="1" Margin="5">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="196" />
                                     <ColumnDefinition Width="*" />
@@ -52,32 +53,30 @@
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"  Padding="5" Grid.Column="0" Grid.Row="0">
                                     <Border BorderBrush="AntiqueWhite" BorderThickness="1" Padding="5">
                                         <Image Width="128"  MaxHeight="128" Source="{Binding Preview}"/>
-
                                     </Border>
-                                    <Border Background="SkyBlue" Margin="5" BorderBrush="DarkBlue" BorderThickness="1">
-                                        <TextBlock HorizontalTextAlignment="Center" Padding="2,1" MaxWidth="180" TextWrapping="Wrap">
-                                                <Run Text="{Binding Task.Item.Parent.Name}"/><Run>/</Run><Run Text="{Binding Task.Item.Name}"/>
+                                    <Border Background="{StaticResource SystemColorHighlightColor}" CornerRadius="3" Margin="5" BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="1">
+                                        <TextBlock Foreground="{StaticResource SystemColorHighlightTextBrush}" Style="{StaticResource CaptionTextBlockStyle}" HorizontalTextAlignment="Center" Padding="2,1" MaxWidth="180" TextWrapping="Wrap">
+                                            <Run Text="{Binding Task.Item.Parent.Name}"/><Run>/</Run><Run Text="{Binding Task.Item.Name}"/>
                                         </TextBlock>
                                     </Border>
                                 </StackPanel>
 
-                                <Grid Grid.Row="0" Grid.Column="1"  Width="340">
+                                <Grid Grid.Row="0" Grid.Column="1" >
                                     <Grid.RowDefinitions>
                                         <RowDefinition/>
                                         <RowDefinition/>
-                                        <RowDefinition Height="40"/>
+                                        <RowDefinition Height="50"/>
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Row="0" Grid.Column="0">
-                                            <TextBlock FontWeight="Bold" FontSize="20" Margin="0,20,0,0" TextWrapping="Wrap" Text="{Binding Task.Message}"/>
-                                            <Border BorderThickness="0,0,0,1" Margin="0,0,0,10" BorderBrush="Black" Padding="0">
-                                                <TextBlock FontStyle="Italic" TextAlignment="Right" Text="{Binding Task.CreatedBy.Name}" />
-                                            </Border>
-                                        </StackPanel>
-                                    
-                                    <Grid Grid.Row="1" Grid.Column="0" Visibility="{Binding Comments.TotalCount, Converter={StaticResource ISNonZero}}">
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Padding="5">
+                                        <TextBlock FontWeight="Bold" Style="{StaticResource TitleTextBlockStyle}" Margin="0,20,0,0" TextWrapping="Wrap" Text="{Binding Task.Message}"/>
+                                        <Border BorderThickness="0,0,0,1" Margin="0,0,0,10" BorderBrush="Black" Padding="0">
+                                            <TextBlock FontStyle="Italic" Style="{StaticResource BodyTextBlockStyle}" TextAlignment="Right" Text="{Binding Task.CreatedBy.Name}" />
+                                        </Border>
+                                    </StackPanel>
+                                    <Grid Grid.Row="1" Grid.Column="0">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="20"/>
                                             <RowDefinition/>
@@ -85,21 +84,42 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Row="0" FontWeight="Bold"><Run Text="{Binding Comments.TotalCount}"/> Comments:</TextBlock>
-                                        <ListView Grid.Row="1" Grid.Column="0" 
-                                                 ItemsSource="{Binding Comments.Entries}" 
-                                                 ItemTemplate="{StaticResource commentsDisplay}" 
-                                                 HorizontalAlignment="Stretch"
-                                                 Margin="5,5">
-                                            
-                                        </ListView>
-
+                                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource CaptionTextBlockStyle}"><Run Text="{Binding Comments.TotalCount}"/> Comments</TextBlock>
+                                        </StackPanel>
+                                        <ScrollViewer Grid.Row="1" MaxHeight="200">
+                                            <ListView  Grid.Column="0" 
+                                                ItemsSource="{Binding Comments.Entries}" 
+                                                ItemTemplate="{StaticResource commentsDisplay}" 
+                                                HorizontalAlignment="Stretch"
+                                                Margin="5,5"
+                                                SelectionMode="None"
+                                                IsItemClickEnabled="False">
+                                            </ListView>
+                                        </ScrollViewer>
                                     </Grid>
+                                    
+                                    <Popup  Name="CommentEntry" Grid.Row="2" VerticalOffset="-100" HorizontalOffset="60" Grid.Column="0">
+                                        <Border BorderBrush="{StaticResource ButtonForegroundThemeBrush}" BorderThickness="1" CornerRadius="3" Margin="5">
+                                            <Grid Padding="5" Background="{StaticResource SystemColorWindowBrush}">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition/>
+                                                    <RowDefinition/>
+                                                </Grid.RowDefinitions>
+                                                <TextBox Name="NewComment" Grid.Row="0" Grid.Column="0" Width="300" Height="100" AcceptsReturn="True" TextWrapping="Wrap"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="1" Grid.Column="0" Margin="5">
+                                                    <Button Content="Add" Name="Add" Click="Add_Click" Margin="0,0,5,0"/>
+                                                    <Button Content="Cancel" Name="Cancel" Click="Cancel_Click"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </Popup>
 
-                                    <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right">
+
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,0">
                                         <Button Name="Review" Content="Review" Click="Review_Click"></Button>
-                                        <Button Name="Comments" Content="Comments" Margin="5,0,5,0" Click="Comments_Click"></Button>
-                                        <Button Name="Box" Content="Open In Box" Click="Box_Click"></Button>
+                                        <Button Name="Comments" Content="Comment" Margin="5,0,5,0" Click="Comments_Click"></Button>
+                                        <Button Name="Box" Content="In Broswer" Click="Box_Click"></Button>
                                     </StackPanel>
                                 </Grid>
                             </Grid>
@@ -110,7 +130,8 @@
             </StackPanel>
         </ScrollViewer>
 
-        <TextBlock TextAlignment="Center" Grid.Row="2" Grid.Column="1" Text="{Binding Status, Mode=TwoWay}"/>
+        <TextBlock TextAlignment="Center" Grid.Row="2" Text="{Binding Status, Mode=TwoWay}"/>
+        
     </Grid>
 </Page>
     

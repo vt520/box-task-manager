@@ -24,6 +24,7 @@ namespace Box_Task_Manager.View {
                     return new List<Command> {
                         new Command(async _ => {
                             assignment_complete.CompleteTask();
+
                         }) {Name = "Complete Task"}
                     };
                 } else if (this is Review assignment_review) {

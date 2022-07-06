@@ -9,6 +9,7 @@ using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Storage;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -25,7 +26,7 @@ namespace Box_Task_Manager
     sealed partial class App : Application
     {
         public const string Authorization_Key = "box_auth";
-        //private static 
+        //private stati80
         public static ApplicationDataContainer Configuration { get => Windows.Storage.ApplicationData.Current.LocalSettings; }
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -33,7 +34,10 @@ namespace Box_Task_Manager
         /// </summary>
         public App()
         {
+            ApplicationView.PreferredLaunchViewSize = new Size(620, 500);
+            
             this.InitializeComponent();
+            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
             this.Suspending += OnSuspending;
         }
 
@@ -75,6 +79,8 @@ namespace Box_Task_Manager
                 }
                 // Ensure the current window is active
                 Window.Current.Activate();
+               
+                ApplicationView.GetForCurrentView().SetPreferredMinSize(new Size(620, 300));
             }
         }
 
