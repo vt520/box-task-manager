@@ -119,7 +119,7 @@
                                     <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,0">
                                         <Button Name="Review" Content="Review" Click="Review_Click"></Button>
                                         <Button Name="Comments" Content="Comment" Margin="5,0,5,0" Click="Comments_Click"></Button>
-                                        <Button Name="Box" Content="In Broswer" Click="Box_Click"></Button>
+                                        <Button Name="Box" Content="On Box" Click="Box_Click"></Button>
                                     </StackPanel>
                                 </Grid>
                             </Grid>
