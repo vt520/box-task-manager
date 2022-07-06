@@ -187,63 +187,6 @@ namespace Box_Task_Manager.View {
             Sync = null;
             UpdatingTasks = false;
             return;
-
-            BoxUser boxUser = await Client.UsersManager.GetCurrentUserInformationAsync();
-            Status = "Reading Root Folder";
-            (Queue<BoxFile> files, Queue<BoxFolder> folders) = await ReadFolder("0");
-
-            while(folders.TryDequeue(out BoxFolder folder)) {
-                Status = $"Finding files, {folders.Count} folders remaining, {files.Count} files found";
-                (Queue<BoxFile> folder_files, Queue<BoxFolder> folder_folders) = await ReadFolder(folder.Id);
-                while (folder_files.TryDequeue(out BoxFile file)) files.Enqueue(file);
-                while (folder_folders.TryDequeue(out BoxFolder child)) folders.Enqueue(child);
-            }
-
-            while(files.TryDequeue(out BoxFile file)) {
-                Status = $"{files.Count} files left to check for tasks, {Tasks.Count} found";
-                BoxCollection<BoxTask> file_tasks = await Client.FilesManager.GetFileTasks(file.Id);
-                foreach (BoxTask task in file_tasks.Entries) {
-                    bool task_completed = task.IsCompleted;
-                    bool all_complete = (task.CompletionRule == BoxCompletionRule.all_assignees);
-                    BoxTaskAssignment assigned_to_me = null;
-                    if (!task_completed) {
-                        BoxCollection<BoxTaskAssignment> task_assignments = task.TaskAssignments;
-                        foreach (BoxTaskAssignment task_assignment in task_assignments.Entries) {
-                            task_completed |= task_assignment.Status != "incomplete";
-                            all_complete &= task_assignment.Status != "incomplete";
-                            if (task_assignment.AssignedTo.Id == boxUser.Id) assigned_to_me = task_assignment;
-                        }
-                    }
-                    if(!(assigned_to_me is null)) {
-
-                    }
-                    if (all_complete | task_completed) {
-                        List<TaskEntry> stale_entries = Tasks.Where(item => (item.Task.Id == task.Id)).ToList();
-                        foreach (TaskEntry stale_entry in stale_entries) {
-                            Tasks.Remove(stale_entry);
-                        }
-                        continue;
-                    }
-
-                    
-                    if (assigned_to_me is null) continue;
-                    if (task.CompletionRule == BoxCompletionRule.any_assignee && task_completed) continue;
-                    IEnumerable<TaskEntry> MatchingTasks = Tasks.Where(item => (item.Task.Id == task.Id));
-                    foreach(TaskEntry existing in MatchingTasks) {
-                        existing.UpdateAll();
-                    }
-                    if (MatchingTasks?.Count() > 0) continue; // Linq No Dupe id
-
-                    // this is fugly
-                    Assignment assignment = Assignment.InstanceFor(assigned_to_me, task.Action);
-
-                    TaskEntry entry = new TaskEntry {  Task = task, Assignment = assignment};
-                    this.Tasks.Add(entry);
-                }
-            }
-            Status = $"Completed";
-            Sync = null;
-            UpdatingTasks = false;
         }
 
         private async Task<(Queue<BoxFile>, Queue<BoxFolder>)> ReadFolder(string folder_id = "0") {
