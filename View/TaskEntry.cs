@@ -27,7 +27,7 @@ namespace Box_Task_Manager.View {
         protected ImageSource _Icon;
         public ImageSource Icon { 
             get {
-                if(_Icon is null) return new BitmapImage(new Uri("ms-appx:///Assets/StoreLogo.png"));
+                if(_Icon is null) return new BitmapImage(new Uri("ms-appx:///Assets/Square150x150Logo.scale-200.png"));
                 return _Icon;
             }
             set { 
