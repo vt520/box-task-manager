@@ -4,10 +4,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Windows.Data.Pdf;
-using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
@@ -165,7 +163,7 @@ namespace Box_Task_Manager.View {
                 XRepHints = "[pdf]"
             };
             MemoryStream buffer = new MemoryStream();
-            BoxRepresentationCollection<BoxRepresentation> representations
+            BoxRepresentationCollection<BoxRepresentation> representations // System.TimeoutException @@ MCR do this everywhere 
                 = await Main.Client.FilesManager.GetRepresentationsAsync(pdf_request);
             Stream representation_stream = null;
             try {

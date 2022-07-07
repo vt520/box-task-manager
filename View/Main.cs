@@ -2,22 +2,18 @@
 using Box.V2.Config;
 using Box.V2.Exceptions;
 using Box.V2.Models;
-using Box.V2.Managers;
 using Box.V2;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Windows.Storage;
-using Box_Task_Manager.View.TaskEntries;
 using System.Threading;
 using Windows.UI.Xaml;
 using System.Collections.Concurrent;
 using Windows.System.Threading;
-using System.Timers;
 
 namespace Box_Task_Manager.View {
 
@@ -27,7 +23,7 @@ namespace Box_Task_Manager.View {
         private ConcurrentQueue<BoxFile> _FileStack = new ConcurrentQueue<BoxFile> { };
         private ThreadPoolTimer FileStackTimer;
         private DispatcherTimer TaskUpdateTimer = new DispatcherTimer { Interval = new TimeSpan (0, 0, 1) };
-
+        private static Queue<BoxFolder> _Folders;
 
         private DispatcherTimer Timer = new DispatcherTimer() { Interval = new TimeSpan(0, 0, 1) };
         private static object Sync = null;
@@ -56,7 +52,7 @@ namespace Box_Task_Manager.View {
         private string _Status = "Waiting to Read Task List";
         public string Status {
             get {
-                return $"{Tasks.Count()} Tasks Loaded, {_FileStack.Count()} in queue";
+                return $"{Tasks.Count()} Tasks Loaded, {_Folders?.Count()} folders and {_FileStack.Count()} files left to check";
             }
             set {
                 if (_Status == value) return;
@@ -98,10 +94,43 @@ namespace Box_Task_Manager.View {
                 }
             }
         }
+        
+        private bool _IsScanningFolders = false;
+
+        public bool IsScanningFolders {
+            get => _IsScanningFolders | !(FolderReaderTimer is null);
+
+            set {
+                if(IsScanningFolders == value) return;
+                _IsScanningFolders = value;
+                if(value) {
+                    FolderReaderTimer_Tick(null);
+                } else {
+                    FolderReaderTimer.Cancel();
+                    FolderReaderTimer = null;
+                }
+            }
+        }
+
+        private bool _IsScanningFiles = false;
+        public bool IsScanningFiles {
+            get => _IsScanningFiles | !(FileStackTimer is null);
+            private set {
+                if(IsScanningFiles == value) return;
+                _IsScanningFiles = value;
+                if(value) {
+                    FileStackTimer_Tick(null);
+                } else {
+                    FileStackTimer.Cancel();
+                    FileStackTimer = null;
+                }
+            }
+        }
+
         public Main() {
             Timer.Tick += Timer_Tick;
 
-            //Session = null;
+            Session = null;
             OAuthSession session = Session; // use appsettings
 
             Config = new BoxConfig(_ClientID, _ClientSecret, RedirectUri);
@@ -114,19 +143,21 @@ namespace Box_Task_Manager.View {
 
         private async void FolderReaderTimer_Tick(ThreadPoolTimer timer) {
             BoxCollection<BoxItem> box_entry = await Main.Client.FoldersManager.GetFolderItemsAsync("0", 1000);
-            (Queue<BoxFile> files, Queue<BoxFolder> folders) = await ReadFolder("0");
+            Queue<BoxFile> files;
+
+            (files, _Folders) = await ReadFolder("0");
             while (files.TryDequeue(out BoxFile file)) _FileStack.Enqueue(file);
-            while (folders.TryDequeue(out BoxFolder folder)) {
+            while (_Folders.TryDequeue(out BoxFolder folder)) {
                 Queue<BoxFolder> subfolders;
                 (files, subfolders) = await ReadFolder(folder.Id);
                 while (files.TryDequeue(out BoxFile file)) {
                     if(_FileStack.Where(item=>item.Id == file.Id).Count() == 0) _FileStack.Enqueue(file);
                 }
                 OnPropertyChangedAsync(nameof(Status));
-                while (subfolders.TryDequeue(out BoxFolder subfolder)) folders.Enqueue(subfolder);
-                while(_FileStack.Count()>10) Thread.Sleep(1000);
+                while (subfolders.TryDequeue(out BoxFolder subfolder)) _Folders.Enqueue(subfolder);
+                //while(_FileStack.Count()>10) Thread.Sleep(1000);
             }
-            FolderReaderTimer = ThreadPoolTimer.CreateTimer(FolderReaderTimer_Tick, new TimeSpan(0, 0, 1));
+            if (IsScanningFolders) FolderReaderTimer = ThreadPoolTimer.CreateTimer(FolderReaderTimer_Tick, new TimeSpan(0, 15, 0));
         }
         private async void FileStackTimer_Tick(ThreadPoolTimer timer) {
             BoxUser boxUser = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
@@ -155,7 +186,7 @@ namespace Box_Task_Manager.View {
                 }
                 OnPropertyChangedAsync(nameof(Status));
             }
-            FileStackTimer = ThreadPoolTimer.CreateTimer(FileStackTimer_Tick, new TimeSpan(0, 0, 1));
+           if (IsScanningFiles) FileStackTimer = ThreadPoolTimer.CreateTimer(FileStackTimer_Tick, new TimeSpan(0, 0, 1));
         }
 
         private void Auth_SessionInvalidated(object sender, EventArgs e) {
@@ -184,6 +215,7 @@ namespace Box_Task_Manager.View {
             foreach(TaskEntry task in Tasks.Where(item=>item.Completed)) {
                 Tasks.Remove(task);
             }
+
             Sync = null;
             UpdatingTasks = false;
             return;
@@ -207,10 +239,6 @@ namespace Box_Task_Manager.View {
         }
         public async Task Init(string access_code) {
             await Client.Auth.AuthenticateAsync(access_code);
-            /*Command after_auth = new Command(async _ => {
-                await UpdateTaskList();
-            });
-            Execute(after_auth);*/
             Session = Client.Auth.Session;
             Ready = true;
         }
@@ -247,17 +275,12 @@ namespace Box_Task_Manager.View {
                 if (_Ready == value) return;
                 if (value) {
                     Timer.Start();
-                    FileStackTimer = ThreadPoolTimer.CreateTimer(FileStackTimer_Tick, new TimeSpan(0, 0, 1));
-                    FolderReaderTimer = ThreadPoolTimer.CreateTimer(FolderReaderTimer_Tick, new TimeSpan(0, 0, 1));
+                    IsScanningFiles = true;
+                    IsScanningFolders = true;
                 } else {
                     Timer.Stop();
-                    if (!(FileStackTimer is null)) {
-                        FileStackTimer.Cancel();
-                    }
-                    if (!(FolderReaderTimer is null)) {
-                        FolderReaderTimer.Cancel();
-                    }
-                    FolderReaderTimer = FileStackTimer = null;
+                    IsScanningFiles = false;
+                    IsScanningFolders = false;
                 }
                 
                 UpdatingTasks = _Ready = value;
