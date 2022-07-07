@@ -14,6 +14,8 @@ using System.Threading;
 using Windows.UI.Xaml;
 using System.Collections.Concurrent;
 using Windows.System.Threading;
+using System.Diagnostics;
+using Windows.UI.Popups;
 
 namespace Box_Task_Manager.View {
 
@@ -23,7 +25,7 @@ namespace Box_Task_Manager.View {
         private ConcurrentQueue<BoxFile> _FileStack = new ConcurrentQueue<BoxFile> { };
         private ThreadPoolTimer FileStackTimer;
         private DispatcherTimer TaskUpdateTimer = new DispatcherTimer { Interval = new TimeSpan (0, 0, 1) };
-        private static Queue<BoxFolder> _Folders;
+        private static Queue<BoxFolder> _Folders = new Queue<BoxFolder> { };
 
         private DispatcherTimer Timer = new DispatcherTimer() { Interval = new TimeSpan(0, 0, 1) };
         private static object Sync = null;
@@ -130,7 +132,7 @@ namespace Box_Task_Manager.View {
         public Main() {
             Timer.Tick += Timer_Tick;
 
-            Session = null;
+            //Session = null;
             OAuthSession session = Session; // use appsettings
 
             Config = new BoxConfig(_ClientID, _ClientSecret, RedirectUri);
@@ -142,51 +144,56 @@ namespace Box_Task_Manager.View {
         }
 
         private async void FolderReaderTimer_Tick(ThreadPoolTimer timer) {
-            BoxCollection<BoxItem> box_entry = await Main.Client.FoldersManager.GetFolderItemsAsync("0", 1000);
-            Queue<BoxFile> files;
-
-            (files, _Folders) = await ReadFolder("0");
-            while (files.TryDequeue(out BoxFile file)) _FileStack.Enqueue(file);
-            while (_Folders.TryDequeue(out BoxFolder folder)) {
-                Queue<BoxFolder> subfolders;
-                (files, subfolders) = await ReadFolder(folder.Id);
-                while (files.TryDequeue(out BoxFile file)) {
-                    if(_FileStack.Where(item=>item.Id == file.Id).Count() == 0) _FileStack.Enqueue(file);
+            try {
+                Queue<BoxFile> files;
+                (files, _Folders) = await ReadFolder("0");
+                while (files.TryDequeue(out BoxFile file)) _FileStack.Enqueue(file);
+                while (_Folders.TryDequeue(out BoxFolder folder)) {
+                    Queue<BoxFolder> subfolders;
+                    (files, subfolders) = await ReadFolder(folder.Id);
+                    while (files.TryDequeue(out BoxFile file)) {
+                        if (_FileStack.Where(item => item.Id == file.Id).Count() == 0) _FileStack.Enqueue(file);
+                    }
+                    OnPropertyChangedAsync(nameof(Status));
+                    while (subfolders.TryDequeue(out BoxFolder subfolder)) _Folders.Enqueue(subfolder);
                 }
-                OnPropertyChangedAsync(nameof(Status));
-                while (subfolders.TryDequeue(out BoxFolder subfolder)) _Folders.Enqueue(subfolder);
-                //while(_FileStack.Count()>10) Thread.Sleep(1000);
+            } catch (Exception exception) {
+                Debug.WriteLine(exception.Message);
             }
             if (IsScanningFolders) FolderReaderTimer = ThreadPoolTimer.CreateTimer(FolderReaderTimer_Tick, new TimeSpan(0, 15, 0));
         }
         private async void FileStackTimer_Tick(ThreadPoolTimer timer) {
-            BoxUser boxUser = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
-            while (_FileStack.TryDequeue(out BoxFile file)) {
-                BoxCollection <BoxTask> file_tasks = await Main.Client.FilesManager.GetFileTasks(file.Id);
-                foreach(BoxTask task in file_tasks.Entries) {
-                    if(_TaskStack.Where(item => item.Id == task.Id).Count() == 0) {
-                        if (task.IsCompleted) continue;
-                        bool all_completed = true;
-                        bool partially_completed = false;
-                        bool assigned_to_me = false;
-                        foreach (BoxTaskAssignment assignment in task.TaskAssignments.Entries) {
-                            all_completed &= assignment.Status != "incomplete";
-                            partially_completed |= assignment.Status != "incomplete";
-                            if (assignment.AssignedTo.Id == (boxUser).Id) {
-                                assigned_to_me = true;
+            try {
+                BoxUser boxUser = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
+                while (_FileStack.TryDequeue(out BoxFile file)) {
+                    BoxCollection<BoxTask> file_tasks = await Main.Client.FilesManager.GetFileTasks(file.Id);
+                    foreach (BoxTask task in file_tasks.Entries) {
+                        if (_TaskStack.Where(item => item.Id == task.Id).Count() == 0) {
+                            if (task.IsCompleted) continue;
+                            bool all_completed = true;
+                            bool partially_completed = false;
+                            bool assigned_to_me = false;
+                            foreach (BoxTaskAssignment assignment in task.TaskAssignments.Entries) {
+                                all_completed &= assignment.Status != "incomplete";
+                                partially_completed |= assignment.Status != "incomplete";
+                                if (assignment.AssignedTo.Id == (boxUser).Id) {
+                                    assigned_to_me = true;
+                                }
                             }
+                            if (!assigned_to_me) continue;
+                            if (all_completed) continue;
+                            if (partially_completed && task.CompletionRule == BoxCompletionRule.any_assignee) continue;
+                            _TaskStack.Enqueue(task);
+                        } else {
+                            // duplicate
                         }
-                        if (!assigned_to_me) continue;
-                        if (all_completed) continue;
-                        if (partially_completed && task.CompletionRule == BoxCompletionRule.any_assignee) continue;
-                        _TaskStack.Enqueue(task);
-                    } else {
-                        // duplicate
                     }
+                    OnPropertyChangedAsync(nameof(Status));
                 }
-                OnPropertyChangedAsync(nameof(Status));
+            } catch (Exception exception) {
+                Debug.WriteLine(exception.Message);
             }
-           if (IsScanningFiles) FileStackTimer = ThreadPoolTimer.CreateTimer(FileStackTimer_Tick, new TimeSpan(0, 0, 1));
+            if (IsScanningFiles) FileStackTimer = ThreadPoolTimer.CreateTimer(FileStackTimer_Tick, new TimeSpan(0, 0, 1));
         }
 
         private void Auth_SessionInvalidated(object sender, EventArgs e) {
@@ -222,7 +229,7 @@ namespace Box_Task_Manager.View {
         }
 
         private async Task<(Queue<BoxFile>, Queue<BoxFolder>)> ReadFolder(string folder_id = "0") {
-            BoxCollection<BoxItem> search = await Client.FoldersManager.GetFolderItemsAsync(folder_id, 100, direction:BoxSortDirection.DESC);
+            BoxCollection<BoxItem> search = await Client.FoldersManager.GetFolderItemsAsync(folder_id, 100);
             Queue<BoxFile> files = new Queue<BoxFile>();
             Queue<BoxFolder> folders = new Queue<BoxFolder>();
             foreach (BoxItem item in search.Entries) {
@@ -238,9 +245,13 @@ namespace Box_Task_Manager.View {
             return (files, folders);
         }
         public async Task Init(string access_code) {
-            await Client.Auth.AuthenticateAsync(access_code);
-            Session = Client.Auth.Session;
-            Ready = true;
+            try {
+                await Client.Auth.AuthenticateAsync(access_code);
+                Session = Client.Auth.Session;
+                Ready = true;
+            } catch (Exception exception) {
+                await (new MessageDialog(exception.GetType().Name, exception.Message)).ShowAsync();
+            }
         }
         protected override void Execute(ICommand command) {
             try {

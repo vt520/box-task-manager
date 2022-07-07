@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -100,29 +101,36 @@ namespace Box_Task_Manager.View {
             }
         }
         public async void UpdateComments() {
-
-            BoxCollection<BoxComment> current_comments  = await Main.Client.FilesManager.GetCommentsAsync(Task.Item.Id);
-            if (Comments is null) {
-                Comments = current_comments;
-                return;
-            }
-            bool stale_comments = false;
-
-            foreach (BoxComment comment in current_comments.Entries) {
-                IEnumerable<BoxComment> existing_comments = Comments.Entries.Where(item => (item.Id == comment.Id));
-                if (existing_comments.Count() > 0) {
-                    // merge comment
-                    BoxComment existing_comment = existing_comments.First();
-
-                    if (existing_comment.Message == comment.Message) continue;
+            try {
+                BoxCollection<BoxComment> current_comments = await Main.Client.FilesManager.GetCommentsAsync(Task.Item.Id);
+                if (Comments is null) {
+                    Comments = current_comments;
+                    return;
                 }
-                stale_comments = true;
+                bool stale_comments = false;
+
+                foreach (BoxComment comment in current_comments.Entries) {
+                    IEnumerable<BoxComment> existing_comments = Comments.Entries.Where(item => (item.Id == comment.Id));
+                    if (existing_comments.Count() > 0) {
+                        // merge comment
+                        BoxComment existing_comment = existing_comments.First();
+
+                        if (existing_comment.Message == comment.Message) continue;
+                    }
+                    stale_comments = true;
+                }
+                if (stale_comments) Comments = current_comments;
+            } catch (Exception exception) {
+                Debug.WriteLine(exception.Message);
             }
-            if (stale_comments) Comments = current_comments;
         }
 
         public async Task UpdateTask() {
-            Task = await Main.Client.TasksManager.GetTaskAsync(Task.Id);
+            try {
+                Task = await Main.Client.TasksManager.GetTaskAsync(Task.Id);
+            } catch (Exception exception) {
+                Debug.WriteLine(exception.Message);
+            }
         }
         public void UpdateAll() {
             UpdateAssignment();
@@ -132,63 +140,73 @@ namespace Box_Task_Manager.View {
         }
 
         private async void UpdateAssignment() {
-            BoxUser user = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
-            foreach(BoxTaskAssignment assignment in Task.TaskAssignments.Entries) {
-                if (assignment.AssignedTo.Id == user.Id) {
-                    
-                    Assignment = Assignment.InstanceFor(assignment, Task.Action);
-                    return;
+            try {
+                BoxUser user = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
+                foreach (BoxTaskAssignment assignment in Task.TaskAssignments.Entries) {
+                    if (assignment.AssignedTo.Id == user.Id) {
+
+                        Assignment = Assignment.InstanceFor(assignment, Task.Action);
+                        return;
+                    }
                 }
+            } catch (Exception exception) {
+                Debug.WriteLine(exception.Message);
             }
         }
 
         private async void UpdateIcon() {
             if (!(_Icon is null)) return;
+            try {
+                Stream stream = await Main.Client.FilesManager.GetThumbnailAsync(Task.Item.Id, minHeight: 256);
+                MemoryStream buffer = new MemoryStream();
+                await stream.CopyToAsync(buffer);
+                buffer.Position = 0;
 
-            Stream stream = await Main.Client.FilesManager.GetThumbnailAsync(Task.Item.Id, minHeight: 256);
-            MemoryStream buffer = new MemoryStream();
-            await stream.CopyToAsync(buffer);
-            buffer.Position = 0;
-
-            BitmapImage thumbnail = new BitmapImage();
-            thumbnail.SetSource(buffer.AsRandomAccessStream());
-            Icon = thumbnail;
-
+                BitmapImage thumbnail = new BitmapImage();
+                thumbnail.SetSource(buffer.AsRandomAccessStream());
+                Icon = thumbnail;
+            } catch (Exception exception) {
+                Debug.WriteLine(exception.Message);
+            }
         }
 
         protected async virtual void UpdatePreview() {
-            if (!(_Preview is null)) return;
-            BoxRepresentationRequest pdf_request = new BoxRepresentationRequest {
-                FileId = Task.Item.Id,
-                XRepHints = "[pdf]"
-            };
-            MemoryStream buffer = new MemoryStream();
-            BoxRepresentationCollection<BoxRepresentation> representations // System.TimeoutException @@ MCR do this everywhere 
-                = await Main.Client.FilesManager.GetRepresentationsAsync(pdf_request);
-            Stream representation_stream = null;
             try {
-                foreach (BoxRepresentation rep in representations.Entries) {
-                    if (rep.Status.State != "error") {
-                        representation_stream = await Main.Client.FilesManager.GetRepresentationContentAsync(pdf_request, "");
+                if (!(_Preview is null)) return;
+                BoxRepresentationRequest pdf_request = new BoxRepresentationRequest {
+                    FileId = Task.Item.Id,
+                    XRepHints = "[pdf]"
+                };
+                MemoryStream buffer = new MemoryStream();
+                BoxRepresentationCollection<BoxRepresentation> representations // System.TimeoutException @@ MCR do this everywhere 
+                    = await Main.Client.FilesManager.GetRepresentationsAsync(pdf_request);
+                Stream representation_stream = null;
+                try {
+                    foreach (BoxRepresentation rep in representations.Entries) {
+                        if (rep.Status.State != "error") {
+                            representation_stream = await Main.Client.FilesManager.GetRepresentationContentAsync(pdf_request, "");
+                        }
+                    }
+                } catch {
+
+                }
+                if (representation_stream is null) {
+                    if (Task.Item.Name.ToLower().EndsWith(".pdf")) {
+                        representation_stream = Main.Client.FilesManager.DownloadAsync(Task.Item.Id).Result;
                     }
                 }
-            } catch {
-
-            }
-            if (representation_stream is null) {
-                if (Task.Item.Name.ToLower().EndsWith(".pdf")) {
-                    representation_stream = Main.Client.FilesManager.DownloadAsync(Task.Item.Id).Result;
+                if (representation_stream is Stream) {
+                    await representation_stream.CopyToAsync(buffer);
+                    Document = await PdfDocument.LoadFromStreamAsync(buffer.AsRandomAccessStream());
+                    PdfPage preview_page = Document.GetPage(0);
+                    InMemoryRandomAccessStream draw_buffer = new InMemoryRandomAccessStream();
+                    await preview_page.RenderToStreamAsync(draw_buffer);
+                    BitmapImage preview = new BitmapImage();
+                    await preview.SetSourceAsync(draw_buffer);
+                    Preview = preview;
                 }
-            }
-            if (representation_stream is Stream) {
-                await representation_stream.CopyToAsync(buffer);
-                Document = await PdfDocument.LoadFromStreamAsync(buffer.AsRandomAccessStream());
-                PdfPage preview_page = Document.GetPage(0);
-                InMemoryRandomAccessStream draw_buffer = new InMemoryRandomAccessStream();
-                await preview_page.RenderToStreamAsync(draw_buffer);
-                BitmapImage preview = new BitmapImage();
-                await preview.SetSourceAsync(draw_buffer);
-                Preview = preview;
+            } catch (Exception exception) {
+                Debug.WriteLine(exception.Message);
             }
         }
         private BoxCollection<BoxComment> _Comments;

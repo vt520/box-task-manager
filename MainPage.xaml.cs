@@ -5,6 +5,7 @@ using Windows.UI.Xaml.Controls.Primitives;
 using System.Collections.ObjectModel;
 using Box_Task_Manager.View;
 using Box.V2.Models;
+using Windows.UI.Popups;
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
 namespace Box_Task_Manager
@@ -42,16 +43,7 @@ namespace Box_Task_Manager
         private void MainPage_Loading(FrameworkElement sender, object args) {
             
         }
-
-        private void Button_Click_1(object sender, RoutedEventArgs e) {
-            if(e.OriginalSource is Button button) {
-                if(button.DataContext is TaskEntry entry) {
-                    //Main.Client.TasksManager.UpdateTaskAssignmentAsync()
-                }
-            }
-
-        }
-
+        
         private void ListView_SelectionChanged(object sender, SelectionChangedEventArgs e) {
 
         }
@@ -76,20 +68,17 @@ namespace Box_Task_Manager
 
         private void Comments_Click(object sender, RoutedEventArgs e) {
             if (e.OriginalSource is Button button) {
-                //if()
-                if(button.Parent is Panel parent) {
-                    while(parent is Panel) {
-                        if(parent.FindName("CommentEntry") is Popup entry_area) { 
-                            entry_area.IsOpen = !entry_area.IsOpen;
-                            break;
-                        }
-                        parent = parent.Parent as Panel;
-                    }
-                }
                 if (button.DataContext is TaskEntry entry) {
                     Locator.TaskDetail = entry;
-                    //AddComment.IsOpen = true;
-                    //Frame.Navigate(typeof(Comments));
+                    if (button.Parent is Panel parent) {
+                        while (parent is Panel) {
+                            if (parent.FindName("CommentEntry") is Popup entry_area) {
+                                entry_area.IsOpen = !entry_area.IsOpen;
+                                break;
+                            }
+                            parent = parent.Parent as Panel;
+                        }
+                    }
                 }
             }
         }
@@ -109,16 +98,25 @@ namespace Box_Task_Manager
                     while (parent is Panel) {
                         if (parent.FindName("CommentEntry") is Popup entry_area) {
                             if (entry_area.FindName("NewComment") is TextBox textBox) {
-
-                                BoxComment newComment = await Main.Client.CommentsManager.AddCommentAsync(new BoxCommentRequest {
-                                    Item = new BoxRequestEntity {
-                                        Id = Locator.TaskDetail.Task.Item.Id,
-                                        Type = BoxType.file
-                                    },
-                                    Message = textBox.Text
-                                }); ;
-                                if(newComment?.Id is null) { }
-                                textBox.Text = string.Empty;
+                                if(textBox.Text.Trim().Length == 0) {
+                                    await (new MessageDialog("Sorry, the comment cannot be blank.")).ShowAsync();
+                                    return;
+                                }
+                                // BoxAPIException @@ MCR
+                                try {
+                                    BoxComment newComment = await Main.Client.CommentsManager.AddCommentAsync(new BoxCommentRequest {
+                                        Item = new BoxRequestEntity {
+                                            Id = Locator.TaskDetail.Task.Item.Id,
+                                            Type = BoxType.file
+                                        },
+                                        Message = textBox.Text
+                                    }); ;
+                                    if (newComment?.Id is null) { }
+                                    textBox.Text = string.Empty;
+                                } catch  (Exception exception){
+                                    await (new MessageDialog(exception.Message)).ShowAsync();
+                                    return;
+                                }
                             }
                             entry_area.IsOpen = false;
                             break;
