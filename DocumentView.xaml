@@ -26,13 +26,13 @@
             <GridView ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False" MaxWidth="600" Background="{StaticResource ButtonBackgroundThemeBrush}">
                 <GridView.ItemTemplate>
                     <DataTemplate>
-                        <Image Stretch="UniformToFill" Source="{Binding}" Width="{Binding Value,ElementName=Scale}" Margin="5">
+                        <Image Stretch="UniformToFill" Source="{Binding}" Width="{Binding Value,ElementName=ImageScaleControl}" Margin="5">
                         </Image>
                     </DataTemplate>
                 </GridView.ItemTemplate>
             </GridView>
         </ScrollViewer>
-        <Slider Maximum="1000" Value="500" Minimum="200" Name="Scale" Grid.Column="1" Grid.Row="2" Margin="5"/>
+        <Slider Maximum="1000" Value="500" Minimum="200" Name="ImageScaleControl" Grid.Column="1" Grid.Row="2" Margin="5"/>
 
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>

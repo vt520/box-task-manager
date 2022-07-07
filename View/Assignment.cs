@@ -20,18 +20,18 @@ namespace Box_Task_Manager.View {
                 if (this is Complete assignment_complete) {
                     return new List<Command> {
                         new Command(async _ => {
-                            assignment_complete.CompleteTask();
+                            await assignment_complete.CompleteTask();
 
                         }) {Name = "Complete Task"}
                     };
                 } else if (this is Review assignment_review) {
                     return new List<Command> {
                         new Command(async _ => {
-                            assignment_review.AcceptTask();
+                            await assignment_review.AcceptTask();
                         }) { Name = "Accept Document" },
 
                         new Command(async _ => {
-                            assignment_review.RejectTask();
+                            await assignment_review.RejectTask();
                         }) { Name = "Reject Document" }
                     };
                 }

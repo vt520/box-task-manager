@@ -1,10 +1,11 @@
 ﻿using Box.V2.Models;
 using System;
+using System.Threading.Tasks;
 using Windows.UI.Popups;
 
 namespace Box_Task_Manager.View.Assignments {
     public class Review : Assignment {
-        public async void AcceptTask() {
+        public async Task AcceptTask() {
             try {
                 await Main.Client.TasksManager.UpdateTaskAssignmentAsync(new BoxTaskAssignmentUpdateRequest {
                     Id = BoxTaskAssignment.Id,
@@ -16,7 +17,7 @@ namespace Box_Task_Manager.View.Assignments {
             }
 
         }
-        public async void RejectTask() {
+        public async Task RejectTask() {
             try {
                 await Main.Client.TasksManager.UpdateTaskAssignmentAsync(new BoxTaskAssignmentUpdateRequest {
                     Id = BoxTaskAssignment.Id,

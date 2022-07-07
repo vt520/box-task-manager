@@ -32,11 +32,9 @@ namespace Box_Task_Manager
             this.Loaded += MainPage_Loaded;
         }
 
-        private async void MainPage_Loaded(object sender, RoutedEventArgs e) {
+        private void MainPage_Loaded(object sender, RoutedEventArgs e) {
             if (!_Main.Ready) {
                 oauth.GetAuthCode(Main.Config.AuthCodeUri, Main.Config.RedirectUri);
-            } else {
-                _Main.UpdatingTasks = true;
             }
         }
 
