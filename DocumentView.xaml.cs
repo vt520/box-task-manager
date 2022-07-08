@@ -45,5 +45,11 @@ namespace Box_Task_Manager {
 
             });
         }
+
+        private void page_SizeChanged(object sender, SizeChangedEventArgs e) {
+            Viewport.Width = DisplayGrid.ActualWidth - Sidebar.ActualWidth;
+            ImageScaleControl.Maximum = Viewport.Width;
+            if (ImageScaleControl.Value > Viewport.Width) ImageScaleControl.Value = Viewport.Width;
+        }
     }
 }

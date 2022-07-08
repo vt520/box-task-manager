@@ -9,27 +9,30 @@
     Loaded="Page_Loaded"
     Unloaded="Page_Unloaded"
     DataContext="{Binding TaskDetail, Source={StaticResource Locator}}"
-    Background="{StaticResource ApplicationPageBackgroundThemeBrush}">
+    Background="{StaticResource ApplicationPageBackgroundThemeBrush}"
+    SizeChanged="page_SizeChanged">
 
-    <Grid>
+    <Grid Name="DisplayGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="20"/>
-            <RowDefinition/>
+            <RowDefinition />
             <RowDefinition Height="40"/>
             <RowDefinition Height="50"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition />
-            <ColumnDefinition Width="250"/>
+            <ColumnDefinition x:Name="Sidebar" Width="250"/>
         </Grid.ColumnDefinitions>
 
-        <ScrollViewer Grid.Row="1" Grid.Column="0"
+        <ScrollViewer Name="Viewport" Grid.Row="1" Grid.Column="0"
                        VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" HorizontalAlignment="Center">
-            <GridView ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False" MaxWidth="600" Background="{StaticResource ButtonBackgroundThemeBrush}">
+            <GridView HorizontalAlignment="Center" ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False" MaxWidth="{Binding ElementName=Viewport, Path=Width}">
                 <GridView.ItemTemplate>
                     <DataTemplate>
-                        <Image Stretch="UniformToFill" Source="{Binding}" Width="{Binding Value,ElementName=ImageScaleControl}" Margin="5">
-                        </Image>
+                        <Border Background="{StaticResource ButtonDisabledBorderThemeBrush}" BorderThickness="1">
+                            <Image Stretch="UniformToFill" Source="{Binding}" Width="{Binding Value,ElementName=ImageScaleControl}" Margin="5">
+                            </Image>
+                        </Border>
                     </DataTemplate>
                 </GridView.ItemTemplate>
             </GridView>
@@ -58,23 +61,95 @@
         </Grid>
         <Border Grid.Row="1" Grid.Column="1" BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="1" Margin="5" CornerRadius="3" Padding="5">
             <StackPanel>
-                <ListView ItemsSource="{Binding Assignments}" IsItemClickEnabled="False" SelectionMode="None">
-                    <ListView.Header>
-                        <TextBlock>
-                    Current Task Status
-                        </TextBlock>
-                    </ListView.Header>
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Border BorderBrush="{StaticResource ButtonDisabledBorderThemeBrush}" BorderThickness="1" Padding="5,2">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding AssignedTo.Name}"/>
-                                    <TextBlock>Status: <Run Text="{Binding Status}"/></TextBlock>
+                <Border>
+                    <ListView ItemsSource="{Binding Assignments}" IsItemClickEnabled="False" SelectionMode="None">
+                        <ListView.Header>
+                            <TextBlock>
+                        Current Task Status
+                            </TextBlock>
+                        </ListView.Header>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{StaticResource ButtonDisabledBorderThemeBrush}" BorderThickness="1" Padding="5,2">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding AssignedTo.Name}"/>
+                                        <TextBlock>Status: <Run Text="{Binding Status}"/></TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Border>
+                <Border>
+                    <ListView ItemsSource="{Binding Comments.Entries}">
+                        <ListView.Header>
+                            <TextBlock>Comments</TextBlock>
+                        </ListView.Header>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderThickness="1" BorderBrush="{StaticResource ButtonBorderThemeBrush}" CornerRadius="3" Padding="5">
+                                    <StackPanel>
+                                        <TextBlock TextWrapping="Wrap">
+                                            <Run Text="{Binding Message}"/>
+                                        </TextBlock>
+                                        <Border BorderThickness="0,1,0,0" BorderBrush="{StaticResource ButtonDisabledBorderThemeBrush}" CornerRadius="3">
+                                            <TextBlock HorizontalAlignment="Right">
+                                                By: <Run FontStyle="Italic" Text="{Binding CreatedBy.Name}"/>
+                                            </TextBlock>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Border>
+                <Border>
+                    <StackPanel>
+                        <TextBlock>File Information</TextBlock>
+                        <Border >
+                            <Grid Padding="5" Margin="5" BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="1" RowSpacing="5">
+                                
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/>
+
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" Grid.Column="0">
+                                    File Name
+                                </TextBlock>
+                                <TextBlock Grid.Row="0" Grid.Column="1" TextWrapping="Wrap" Text="{Binding File.Name}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0">
+                                    Folder
+                                </TextBlock>
+                                <TextBlock Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" Text="{Binding File.Parent.Name}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0">
+                                    Uploader
+                                </TextBlock>
+                                <TextBlock Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" Text="{Binding File.CreatedBy.Name}"/>
+                                <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
+                                    <TextBlock>
+                                        Email
+                                    </TextBlock>
+                                    <TextBlock HorizontalAlignment="Right" TextWrapping="Wrap" Text="{Binding File.CreatedBy.Login}"/>
                                 </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+                                <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
+                                    <TextBlock >
+                                        Creation Time
+                                    </TextBlock>
+                                    <TextBlock TextWrapping="Wrap" HorizontalAlignment="Right" Text="{Binding File.CreatedAt}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Border>
     </Grid>

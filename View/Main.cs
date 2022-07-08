@@ -214,7 +214,10 @@ namespace Box_Task_Manager.View {
         }
 
         private void Auth_SessionInvalidated(object sender, EventArgs e) {
-            throw new NotImplementedException();
+            Session = null;
+            Ready = false;
+            
+            //throw new NotImplementedException();
         }
 
         private void Auth_SessionAuthenticated(object sender, SessionAuthenticatedEventArgs e) {
@@ -284,10 +287,15 @@ namespace Box_Task_Manager.View {
             set {
                 if (IsRefreshingTasks == value) return;
                 if(value) {
-                    TaskUpdater_Tick(this, null);
-                    TaskUpdater.Start();
+                    _ = DispatchAction(() => {
+                        TaskUpdater_Tick(this, null);
+                        TaskUpdater.Start();
+                    });
                 } else {
-                    TaskUpdater.Stop();
+                    _ = DispatchAction(() => {
+                        TaskUpdater.Stop();
+                    });
+                    
                 }
                 _IsRefreshingTasks = value;
                 OnPropertyChangedAsync();
@@ -301,18 +309,25 @@ namespace Box_Task_Manager.View {
             set {
                 if (IsConvertingTasks == value) return;
                 if(value) {
-                    TaskConverter_Tick(this, null);
-                    TaskConverter.Start();
+                    _ = DispatchAction(() => {
+                        TaskConverter_Tick(this, null);
+                        TaskConverter.Start();
+                    });
                 } else {
-                    TaskConverter.Stop();
+                    _ = DispatchAction(() => {
+                        TaskConverter.Stop();
+                    });
                 }
                 _IsConvertingTasks = value;
                 OnPropertyChangedAsync();
             }
         }
-        private bool _Ready = false;
+        private bool? _Ready = null;
         public bool Ready { 
-            get => _Ready; 
+            get {
+                if(_Ready is null) return false;
+                return _Ready.Value;
+            }
             set {
                 if (_Ready == value) return;
                 if (value) {
@@ -323,6 +338,12 @@ namespace Box_Task_Manager.View {
                     IsScanningFolders = false;
                     IsConvertingTasks = false;
                     IsRefreshingTasks = false;
+                    _ = DispatchAction(() => {
+                        _FileStack?.Clear();
+                        _Folders?.Clear();
+                        _TaskStack?.Clear();
+                        Tasks?.Clear();
+                    });
                 }
                 
                 _Ready = value;

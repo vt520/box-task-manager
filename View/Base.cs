@@ -12,7 +12,7 @@ namespace Box_Task_Manager.View {
         public void OnPropertyChanged([CallerMemberName] string propertyName = null) {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-        private async Task DispatchAction(Action action) {
+        public async Task DispatchAction(Action action) {
             await CoreApplication.MainView.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => {
                 action();
             });
