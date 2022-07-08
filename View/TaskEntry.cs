@@ -51,6 +51,16 @@ namespace Box_Task_Manager.View {
                 OnPropertyChangedAsync();
             }
         }
+        private bool _SoloCompletion = false;
+
+        public bool SoloCompletion {
+            get => _SoloCompletion;
+            set {
+                if (value == _SoloCompletion) return;
+                _SoloCompletion = value;
+                OnPropertyChangedAsync();
+            }
+        }
         protected virtual async void UpdatePages() {
             Pages.Clear();
             for (uint index = 0; index < Document.PageCount; index++) {
@@ -94,10 +104,20 @@ namespace Box_Task_Manager.View {
                 if (_Task == value) return;
                 _Task = value;
                 OnPropertyChangedAsync();
-
+                
                 // maybe make async command?
 
                 UpdateAll();
+            }
+        }
+
+        private List<BoxTaskAssignment> _Assignments;
+        public List<BoxTaskAssignment> Assignments {
+            get => _Assignments;
+            set {
+                if(value == _Assignments) return;
+                _Assignments = value;
+                OnPropertyChangedAsync();
             }
         }
         public async void UpdateComments() {
@@ -132,15 +152,50 @@ namespace Box_Task_Manager.View {
                 Debug.WriteLine(exception.Message);
             }
         }
+        private BoxUser _UploadedBy;
+        public BoxUser UploadedBy {
+            get => _UploadedBy;
+            set {
+                if(UploadedBy == value) return;
+                _UploadedBy = value;
+                OnPropertyChangedAsync();
+            }
+        }
+
+        private BoxFile _File;
+        public BoxFile File {
+            get => _File;
+            set {
+                if (_File == value) return;
+                _File = value;
+                OnPropertyChangedAsync();
+            }
+        }
         public void UpdateAll() {
+            UpdateFile();
             UpdateAssignment();
             UpdateIcon();
             UpdateComments();
             UpdatePreview();
         }
 
+        private async void UpdateFile() {
+            try {
+                File = await Main.Client.FilesManager.GetInformationAsync(Task.Item.Id);
+                UpdateUploader();
+            } catch (Exception exception) {
+                Debug.WriteLine(exception.Message);
+            }
+        }
+
+        private void UpdateUploader() {
+            UploadedBy = File?.CreatedBy;
+        }
+
         private async void UpdateAssignment() {
             try {
+                Assignments = Task.TaskAssignments.Entries.ToList();
+                SoloCompletion = Task?.CompletionRule == BoxCompletionRule.any_assignee | Assignments?.Count == 1;
                 BoxUser user = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
                 foreach (BoxTaskAssignment assignment in Task.TaskAssignments.Entries) {
                     if (assignment.AssignedTo.Id == user.Id) {

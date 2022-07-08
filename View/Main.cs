@@ -107,14 +107,14 @@ namespace Box_Task_Manager.View {
 
             set {
                 if(IsScanningFolders == value) return;
-                _IsScanningFolders = value;
                 if(value) {
-                    FolderReaderTimer = ThreadPoolTimer.CreatePeriodicTimer(FolderReaderTimer_Tick, new TimeSpan(0, 15, 0));
+                    FolderReaderTimer = ThreadPoolTimer.CreatePeriodicTimer(FolderReaderTimer_Tick, new TimeSpan(0, 1, 0));
                     FolderReaderTimer_Tick(FolderReaderTimer);
                 } else {
                     FolderReaderTimer?.Cancel();
                     FolderReaderTimer = null;
                 }
+                _IsScanningFolders = value;
             }
         }
 
@@ -123,7 +123,6 @@ namespace Box_Task_Manager.View {
             get => _IsScanningFiles | !(FileStackTimer is null);
             private set {
                 if(IsScanningFiles == value) return;
-                _IsScanningFiles = value;
                 if(value) {
                     FileStackTimer = ThreadPoolTimer.CreatePeriodicTimer(FileStackTimer_Tick, new TimeSpan(0, 15, 0));
                     FileStackTimer_Tick(FileStackTimer);
@@ -131,6 +130,7 @@ namespace Box_Task_Manager.View {
                     FileStackTimer?.Cancel();
                     FileStackTimer = null;
                 }
+                _IsScanningFiles = value;
             }
         }
 
@@ -154,6 +154,8 @@ namespace Box_Task_Manager.View {
         }
 
         private async void FolderReaderTimer_Tick(ThreadPoolTimer timer) {
+            if (_IsScanningFolders) return;
+            _IsScanningFolders = true;
             try {
                 Queue<BoxFile> files;
                 (files, _Folders) = await ReadFolder("0");
@@ -171,9 +173,12 @@ namespace Box_Task_Manager.View {
             } catch (Exception exception) {
                 Debug.WriteLine(exception.Message);
             }
+            _IsScanningFolders = false;
             //if (IsScanningFolders) FolderReaderTimer = ThreadPoolTimer.CreateTimer(FolderReaderTimer_Tick, new TimeSpan(0, 15, 0));
         }
         private async void FileStackTimer_Tick(ThreadPoolTimer timer) {
+            if (_IsScanningFiles) return;
+            _IsScanningFiles = true;
             try {
                 BoxUser boxUser = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
                 while (_FileStack.TryDequeue(out BoxFile file)) {
@@ -228,7 +233,8 @@ namespace Box_Task_Manager.View {
                 await task.UpdateTask();
             }
 
-            foreach (TaskEntry task in Tasks.Where(item => item.Completed)) {
+            List <TaskEntry> completed = Tasks.Where(item => item.Completed).ToList();
+            foreach (TaskEntry task in completed) {
                 Tasks.Remove(task);
             }
         }
@@ -270,11 +276,27 @@ namespace Box_Task_Manager.View {
                 return Client.Auth.Session.ExpiresIn > 0;
             }
         }
-
-        private bool _IsUpdatingTasks = false;
+        private bool _IsRefreshingTasks = false;
+        public bool IsRefreshingTasks {
+            get {
+                return _IsRefreshingTasks;
+            }
+            set {
+                if (IsRefreshingTasks == value) return;
+                if(value) {
+                    TaskUpdater_Tick(this, null);
+                    TaskUpdater.Start();
+                } else {
+                    TaskUpdater.Stop();
+                }
+                _IsRefreshingTasks = value;
+                OnPropertyChangedAsync();
+            }
+        }
+        private bool _IsConvertingTasks = false;
         public bool IsConvertingTasks {
             get {
-                return _IsUpdatingTasks | TaskConverter.IsEnabled;
+                return _IsConvertingTasks ;
             }
             set {
                 if (IsConvertingTasks == value) return;
@@ -284,10 +306,8 @@ namespace Box_Task_Manager.View {
                 } else {
                     TaskConverter.Stop();
                 }
-                _IsUpdatingTasks = value;
+                _IsConvertingTasks = value;
                 OnPropertyChangedAsync();
-                if (value) ConvertTasksToEntries();
-
             }
         }
         private bool _Ready = false;
@@ -297,10 +317,12 @@ namespace Box_Task_Manager.View {
                 if (_Ready == value) return;
                 if (value) {
                     IsScanningFolders = true;
+                    IsRefreshingTasks = true;
                 } else {
                     IsScanningFiles = false;
                     IsScanningFolders = false;
                     IsConvertingTasks = false;
+                    IsRefreshingTasks = false;
                 }
                 
                 _Ready = value;

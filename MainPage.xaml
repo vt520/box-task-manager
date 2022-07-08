@@ -29,7 +29,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="20"/>
             <RowDefinition/>
-            <RowDefinition Height="20"/>
+            <RowDefinition Height="50"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -56,9 +56,15 @@
                                     </Border>
                                     <Border Background="{StaticResource SystemColorHighlightColor}" CornerRadius="3" Margin="5" BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="1">
                                         <TextBlock Foreground="{StaticResource SystemColorHighlightTextBrush}" Style="{StaticResource CaptionTextBlockStyle}" HorizontalTextAlignment="Center" Padding="2,1" MaxWidth="180" TextWrapping="Wrap">
-                                            <Run Text="{Binding Task.Item.Parent.Name}"/><Run>/</Run><Run Text="{Binding Task.Item.Name}"/>
+                                            <Run Text="{Binding Task.Item.Name}"/>
                                         </TextBlock>
                                     </Border>
+                                    <TextBlock>
+                                        By: <Run Text="{Binding UploadedBy.Name}"/>
+                                    </TextBlock>
+                                    <TextBlock>
+                                        In: <Run Text="{Binding File.Parent.Name}"/>
+                                    </TextBlock>
                                 </StackPanel>
 
                                 <Grid Grid.Row="0" Grid.Column="1" >
@@ -115,7 +121,6 @@
                                         </Border>
                                     </Popup>
 
-
                                     <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,0">
                                         <Button Name="Review" Content="Review" Click="Review_Click"></Button>
                                         <Button Name="Comments" Content="Comment" Margin="5,0,5,0" Click="Comments_Click"></Button>
@@ -129,9 +134,14 @@
                 <local:Authorize x:Name="oauth" Width="400" Height="700"  Grid.Row="1" Grid.Column="1" Visibility="Collapsed"/>
             </StackPanel>
         </ScrollViewer>
-
-        <TextBlock TextAlignment="Center" Grid.Row="2" Text="{Binding Status, Mode=TwoWay}"/>
-        
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="1" Content="Logout" Name="Logout" HorizontalAlignment="Right" Margin="0,0,5,0"/>
+            <TextBlock TextAlignment="Center" Grid.Column="0" Text="{Binding Status, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5"/>
+        </Grid>
     </Grid>
 </Page>
     
