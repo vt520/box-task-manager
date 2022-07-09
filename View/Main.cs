@@ -146,7 +146,7 @@ namespace Box_Task_Manager.View {
             Client.Auth.SessionAuthenticated += Auth_SessionAuthenticated;
             Client.Auth.SessionInvalidated += Auth_SessionInvalidated;
             Tasks = new ObservableCollection<TaskEntry>();
-            Ready = !(session is null);
+            //Ready = !(session is null);
         }
 
         private void TaskUpdater_Tick(object sender, object e) {
@@ -261,7 +261,7 @@ namespace Box_Task_Manager.View {
             try {
                 await Client.Auth.AuthenticateAsync(access_code);
                 Session = Client.Auth.Session;
-                Ready = true;
+                Ready = IsConnected;
             } catch (Exception exception) {
                 await (new MessageDialog(exception.GetType().Name, exception.Message)).ShowAsync();
             }

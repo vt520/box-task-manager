@@ -8,6 +8,7 @@ using Box.V2.Models;
 using Windows.UI.Popups;
 using Windows.ApplicationModel.Core;
 using Windows.UI.Core;
+using System.Diagnostics;
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
 namespace Box_Task_Manager
@@ -24,15 +25,18 @@ namespace Box_Task_Manager
             
             this.InitializeComponent();
                 _Main = Locator.Main;
+
+            this.Loading += MainPage_Loading;
+            this.Loaded += MainPage_Loaded;
+            _Main.PropertyChanged += _Main_PropertyChanged;
+
             oauth.Authorized += async (sender, evt) => {
                 if(sender is Authorize authorize) {
                     await _Main.Init(authorize.AuthCode);
                 }
             };
-            
-            this.Loading += MainPage_Loading;
-            this.Loaded += MainPage_Loaded;
-            _Main.PropertyChanged += _Main_PropertyChanged;
+
+            _Main.Ready = _Main.IsConnected;
         }
 
         private void _Main_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
@@ -80,16 +84,19 @@ namespace Box_Task_Manager
         private void Comments_Click(object sender, RoutedEventArgs e) {
             if (e.OriginalSource is Button button) {
                 if (button.DataContext is TaskEntry entry) {
-                    Locator.TaskDetail = entry;
-                    if (button.Parent is Panel parent) {
-                        while (parent is Panel) {
-                            if (parent.FindName("CommentEntry") is Popup entry_area) {
-                                entry_area.IsOpen = !entry_area.IsOpen;
-                                break;
-                            }
-                            parent = parent.Parent as Panel;
+                    AddComment addComment = new AddComment();
+                    addComment.CommentCommited += async (source, text) => {
+                        try {
+                            await Main.Client.CommentsManager.AddCommentAsync(new BoxCommentRequest {
+                                Item = new BoxRequestEntity { Id = entry.File.Id, Type = BoxType.file },
+                                Message = text
+                            });
+                        } catch (Exception exception) {
+                            Debug.WriteLine(exception.Message);
                         }
-                    }
+                        //(source as ContentDialog).Hide();
+                    };
+                    _ = addComment.ShowAsync();
                 }
             }
         }
@@ -103,63 +110,18 @@ namespace Box_Task_Manager
             }
         }
 
-        private async void Add_Click(object sender, RoutedEventArgs e) {
-            if (e.OriginalSource is Button button) {
-                if (button.Parent is Panel parent) {
-                    while (parent is Panel) {
-                        if (parent.FindName("CommentEntry") is Popup entry_area) {
-                            if (entry_area.FindName("NewComment") is TextBox textBox) {
-                                if(textBox.Text.Trim().Length == 0) {
-                                    await (new MessageDialog("Sorry, the comment cannot be blank.")).ShowAsync();
-                                    return;
-                                }
-                                // BoxAPIException @@ MCR
-                                try {
-                                    BoxComment newComment = await Main.Client.CommentsManager.AddCommentAsync(new BoxCommentRequest {
-                                        Item = new BoxRequestEntity {
-                                            Id = Locator.TaskDetail.Task.Item.Id,
-                                            Type = BoxType.file
-                                        },
-                                        Message = textBox.Text
-                                    }); ;
-                                    if (newComment?.Id is null) { }
-                                    textBox.Text = string.Empty;
-                                } catch  (Exception exception){
-                                    await (new MessageDialog(exception.Message)).ShowAsync();
-                                    return;
-                                }
-                            }
-                            entry_area.IsOpen = false;
-                            break;
-                        }
-                        parent = parent.Parent as Panel;
-                    }
-                }
-            }
-        }
-
-        private void Cancel_Click(object sender, RoutedEventArgs e) {
-            if (e.OriginalSource is Button button) {
-                if (button.Parent is Panel parent) {
-                    while (parent is Panel) {
-                        if (parent.FindName("CommentEntry") is Popup entry_area) {
-                            if(entry_area.FindName("NewComment") is TextBox textBox) {
-                                textBox.Text = string.Empty;
-                            }
-                            entry_area.IsOpen = false;
-                            break;
-                        }
-                        parent = parent.Parent as Panel;
-                    }
-                }
-            }
-        }
-
+       
         private async void Logout_Click(object sender, RoutedEventArgs e) {
-            await CoreApplication.MainView.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => {
-                Main.Client.Auth.LogoutAsync();
-            });
-            
+            MessageDialog prompt = new MessageDialog("Are you sure you want to log out?");
+            prompt.Commands.Add(new UICommand("Yes", (command) => {
+                _ = CoreApplication.MainView.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => {
+                    Main.Client.Auth.LogoutAsync();
+                });
+            }));
+            prompt.Commands.Add(new UICommand("No", (command) => {
+
+            }));
+            await prompt.ShowAsync();
         }
     }
 }

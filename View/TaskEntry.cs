@@ -1,4 +1,5 @@
 ﻿using Box.V2.Models;
+using Microsoft.Toolkit.Uwp.Notifications;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,7 +8,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.Data.Pdf;
+using Windows.Graphics.Imaging;
+using Windows.Storage;
 using Windows.Storage.Streams;
+using Windows.UI.Notifications;
+using Windows.UI.Xaml;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
 
@@ -26,17 +31,17 @@ namespace Box_Task_Manager.View {
             }
         }
         protected ImageSource _Icon;
-        public ImageSource Icon { 
+        public ImageSource Icon {
             get {
-                if(_Icon is null) return new BitmapImage(new Uri("ms-appx:///Assets/Square150x150Logo.scale-200.png"));
+                if (_Icon is null) return new BitmapImage(new Uri("ms-appx:///Assets/Square150x150Logo.scale-200.png"));
                 return _Icon;
             }
-            set { 
-                if(_Icon == value) return;
+            set {
+                if (_Icon == value) return;
                 _Icon = value;
                 OnPropertyChangedAsync();
                 OnPropertyChangedAsync(nameof(Preview));
-            } 
+            }
         }
         private ObservableCollection<ImageSource> _Pages;
 
@@ -104,20 +109,73 @@ namespace Box_Task_Manager.View {
                 if (_Task == value) return;
                 _Task = value;
                 OnPropertyChangedAsync();
-                
+
                 // maybe make async command?
 
                 UpdateAll();
             }
         }
 
-        private List<BoxTaskAssignment> _Assignments;
-        public List<BoxTaskAssignment> Assignments {
+        private void ShowTaskToast() {
+            string toast_tag = $"btm_{Task.Id}";
+            ToastNotificationManagerCompat.History.Remove(toast_tag);
+            //Main.Client.FilesManager.GetThumbnailAsync(Task.Item.Id, 1);
+            //Application.Current.Resources.TryAdd($"testing/{Task.Item.Id}", Icon);
+            new ToastContentBuilder()
+                .AddArgument("task_id", Task.Id)
+                .AddText(Task.Message, hintMaxLines: 1)
+                .AddAttributionText($"Assigned by\n{Task.CreatedBy.Name}")
+
+                .AddText(Comments?.Entries.Last()?.Message)
+                .AddAppLogoOverride(new Uri($"{ApplicationData.Current.LocalFolder.Path}\\{Task.Id}_icon.png"))
+                .AddHeroImage(new Uri($"{ApplicationData.Current.LocalFolder.Path}\\{Task.Id}_icon.png"))
+                .Show(toast => {
+                    toast.ExpiresOnReboot = true;
+                    toast.SuppressPopup = false;
+                    toast.Priority = ToastNotificationPriority.High;
+                    toast.Tag = toast_tag; 
+                });
+            
+        }
+
+        private ObservableCollection<BoxTaskAssignment> _Assignments;
+        public ICollection<BoxTaskAssignment> Assignments {
             get => _Assignments;
             set {
-                if(value == _Assignments) return;
-                _Assignments = value;
+                if (value == _Assignments) return;
+                if (_Assignments is null | value is null) _Assignments = new ObservableCollection<BoxTaskAssignment>();
+                foreach (BoxTaskAssignment assignment in value) {
+                    bool is_changed = false;
+                    if (_Assignments.Where(item => item.Id == assignment.Id).FirstOrDefault() is BoxTaskAssignment existing) {
+                        is_changed |= assignment.Status != existing.Status;
+                        is_changed |= assignment.AssignedTo.Id != existing.AssignedTo.Id;
+                        if (is_changed) {
+                            _Assignments.Remove(existing);
+                            _Assignments.Add(assignment);
+                        }
+                    } else {
+                        // add it
+                        _Assignments.Add(assignment);
+                    }
+                }
+                List<BoxTaskAssignment> missing_assignments = _Assignments.Except(value, new BoxTaskComparator()).ToList();
+                foreach(BoxTaskAssignment missing_assignment in missing_assignments) {
+                    _Assignments.Remove(missing_assignment);
+                }
                 OnPropertyChangedAsync();
+            }
+        }
+
+        public TaskEntry() {
+            
+        }
+        private class BoxTaskComparator : IEqualityComparer<BoxTaskAssignment> {
+            public bool Equals(BoxTaskAssignment x, BoxTaskAssignment y) {
+                return x.Id == y.Id;
+            }
+
+            public int GetHashCode(BoxTaskAssignment obj) {
+                return (int)(ulong.Parse(obj?.Id) % int.MaxValue);
             }
         }
         public async void UpdateComments() {
@@ -177,6 +235,7 @@ namespace Box_Task_Manager.View {
             UpdateIcon();
             UpdateComments();
             UpdatePreview();
+            ShowTaskToast();
         }
 
         private async void UpdateFile() {
@@ -220,6 +279,18 @@ namespace Box_Task_Manager.View {
                 BitmapImage thumbnail = new BitmapImage();
                 thumbnail.SetSource(buffer.AsRandomAccessStream());
                 Icon = thumbnail;
+
+                if (ApplicationData.Current.LocalFolder is StorageFolder folder) {
+                    try {
+                        Stream output = await folder.OpenStreamForWriteAsync($"{Task.Id}_icon.png", CreationCollisionOption.ReplaceExisting);
+                        buffer.Position = 0;
+                        buffer.CopyTo(output);
+                        output.Close();
+                    } catch {
+
+                    }
+                }
+
             } catch (Exception exception) {
                 Debug.WriteLine(exception.Message);
             }
@@ -255,7 +326,12 @@ namespace Box_Task_Manager.View {
                     Document = await PdfDocument.LoadFromStreamAsync(buffer.AsRandomAccessStream());
                     PdfPage preview_page = Document.GetPage(0);
                     InMemoryRandomAccessStream draw_buffer = new InMemoryRandomAccessStream();
+
+
                     await preview_page.RenderToStreamAsync(draw_buffer);
+
+
+
                     BitmapImage preview = new BitmapImage();
                     await preview.SetSourceAsync(draw_buffer);
                     Preview = preview;
@@ -276,15 +352,18 @@ namespace Box_Task_Manager.View {
 
         public bool Completed { 
             get {
-                if (Task.IsCompleted) return true;
-                bool all_completed = true;
-                bool partial_completed = false;
+                if (!Task.IsCompleted) {
+                    bool all_completed = true;
+                    bool partial_completed = false;
 
-                foreach(BoxTaskAssignment assignment in Task.TaskAssignments.Entries) {
-                    all_completed &= assignment.Status != "incomplete";
-                    partial_completed |= assignment.Status != "incomplete";
+                    foreach (BoxTaskAssignment assignment in Task.TaskAssignments.Entries) {
+                        all_completed &= assignment.Status != "incomplete";
+                        partial_completed |= assignment.Status != "incomplete";
+                    }
+                    if (!(all_completed | (partial_completed && Task.CompletionRule == BoxCompletionRule.any_assignee))) return false;
                 }
-                return all_completed | (partial_completed && Task.CompletionRule == BoxCompletionRule.any_assignee);
+                ToastNotificationManagerCompat.History.Remove($"btm_{Task.Id}");
+                return true;
             } 
         }
     }

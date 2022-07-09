@@ -1,4 +1,8 @@
-﻿using System;
+﻿using Box.V2.Models;
+using Box_Task_Manager.View;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
@@ -58,7 +62,7 @@ namespace Box_Task_Manager
                 Window.Current.Content = rootFrame;
             }
 
-            if (e.PrelaunchActivated == false)
+            if (e?.PrelaunchActivated == false)
             {
                 if (rootFrame.Content == null)
                 {
@@ -96,6 +100,29 @@ namespace Box_Task_Manager
             var deferral = e.SuspendingOperation.GetDeferral();
             //TODO: Save application state and stop any background activity
             deferral.Complete();
+        }
+        protected override async void OnActivated(IActivatedEventArgs args) {
+            OnLaunched(null);
+            Frame rootFrame = Window.Current.Content as Frame;
+
+            if (args is ToastNotificationActivatedEventArgs toast) {
+                List<string> parameter_sets = toast.Argument.Split(";").ToList();
+                Dictionary<string, string> arguments = new Dictionary<string, string>();
+                foreach (string parameter in parameter_sets) {
+                    List<string> sections = parameter.Split("=").ToList();
+                    if (sections.Count() < 2) sections.Add("true");
+                    arguments[Uri.UnescapeDataString(sections[0])] = Uri.UnescapeDataString(sections[1]);
+                }
+                if(arguments.TryGetValue("task_id", out string task_id)) {
+                    BoxTask task = await Main.Client.TasksManager.GetTaskAsync(task_id);
+                    Locator.TaskDetail = new TaskEntry {
+                        Task = task
+                    };
+                    rootFrame.Navigate(typeof(DocumentView));
+                }
+            }
+            
+            base.OnActivated(args);
         }
     }
 }

@@ -1,5 +1,7 @@
-﻿using Box_Task_Manager.View;
+﻿using Box.V2.Models;
+using Box_Task_Manager.View;
 using System;
+using System.Diagnostics;
 using Windows.ApplicationModel.Core;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
@@ -50,6 +52,39 @@ namespace Box_Task_Manager {
             Viewport.Width = DisplayGrid.ActualWidth - Sidebar.ActualWidth;
             ImageScaleControl.Maximum = Viewport.Width;
             if (ImageScaleControl.Value > Viewport.Width) ImageScaleControl.Value = Viewport.Width;
+        }
+
+        private void Button_Click_1(object sender, RoutedEventArgs e) {
+
+        }
+
+        private void BrowserLaunch_Click(object sender, RoutedEventArgs e) {
+            if(e.OriginalSource is Button button) {
+                if(button.DataContext is TaskEntry task) {
+                    _ = Windows.System.Launcher.LaunchUriAsync(
+                       new Uri($"https://app.box.com/file/{task.Task.Item.Id}")
+                   );
+                }
+            }
+        }
+
+        private void AddComment_Click(object sender, RoutedEventArgs e) {
+            if (e.OriginalSource is Button button) {
+                if (button.DataContext is TaskEntry entry) {
+                    AddComment addComment = new AddComment();
+                    addComment.CommentCommited += async (source, text) => {
+                        try {
+                            await Main.Client.CommentsManager.AddCommentAsync(new BoxCommentRequest {
+                                Item = new BoxRequestEntity { Id = entry.File.Id, Type = BoxType.file },
+                                Message = text
+                            });
+                        } catch (Exception exception) {
+                            Debug.WriteLine(exception.Message);
+                        }
+                    };
+                    _ = addComment.ShowAsync();
+                }
+            }
         }
     }
 }
