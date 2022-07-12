@@ -82,6 +82,7 @@ namespace Box_Task_Manager.View {
             set {
                 App.Configuration.Values.Remove("session");
                 if (value is null) {
+                    Ready = false;
                     Client?.Auth?.LogoutAsync();
                 } else {
                     ApplicationDataCompositeValue stored_oauth = new ApplicationDataCompositeValue();
@@ -319,7 +320,7 @@ namespace Box_Task_Manager.View {
         public bool Ready { 
             get {
                 if(_Ready is null) return false;
-                return _Ready.Value;
+                return _Ready.Value & IsConnected;
             }
             set {
                 if (_Ready == value) return;

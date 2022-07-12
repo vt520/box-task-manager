@@ -101,9 +101,6 @@
                             </ListView.ItemTemplate>
                         </ListView>
                     </Border>
-                    <Border>
-                        
-                    </Border>
                 </StackPanel>
             </Border>
         </ScrollViewer>

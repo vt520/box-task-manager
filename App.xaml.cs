@@ -6,6 +6,7 @@ using System.Linq;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
+using Windows.Graphics.Display;
 using Windows.Storage;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
@@ -28,11 +29,15 @@ namespace Box_Task_Manager
         /// </summary>
         public App()
         {
-            ApplicationView.PreferredLaunchViewSize = new Size(620, 500);
+
+
+            //ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.Maximized;
+
+
             
             this.InitializeComponent();
-            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
             this.Suspending += OnSuspending;
+
         }
 
         /// <summary>
@@ -69,15 +74,28 @@ namespace Box_Task_Manager
                     // When the navigation stack isn't restored navigate to the first page,
                     // configuring the new page by passing required information as a navigation
                     // parameter
-                    rootFrame.Navigate(typeof(MainPage), e.Arguments);
+                    rootFrame.Navigate(typeof(DualView), e.Arguments);
                 }
                 // Ensure the current window is active
                 Window.Current.Activate();
-               
-                ApplicationView.GetForCurrentView().SetPreferredMinSize(new Size(620, 300));
+                //ApplicationView.GetForCurrentView().;
+                //ApplicationView.PreferredLaunchViewSize = 
+                
+                //ApplicationView.GetForCurrentView().SetPreferredMinSize(new Size(820, 500));
             }
+            Maximize();
         }
+        public void Maximize() {
+            DisplayInformation resolution = DisplayInformation.GetForCurrentView();
+            double conversion = resolution.RawPixelsPerViewPixel;
+            Size relativeSize = new Size(0.80, 0.80);
+            Size windowSize = new Size((resolution.ScreenWidthInRawPixels / conversion) * relativeSize.Width, (resolution.ScreenHeightInRawPixels / conversion) * relativeSize.Height);
 
+            ApplicationView.PreferredLaunchViewSize = windowSize;
+
+            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
+            ApplicationView.GetForCurrentView().SetPreferredMinSize(windowSize);
+        }
         /// <summary>
         /// Invoked when Navigation to a certain page fails
         /// </summary>
@@ -104,7 +122,9 @@ namespace Box_Task_Manager
         protected override async void OnActivated(IActivatedEventArgs args) {
             OnLaunched(null);
             Frame rootFrame = Window.Current.Content as Frame;
-
+            if(!Locator.Instance.Main.Ready) {
+                rootFrame.Navigate(typeof(DualView));
+            }
             if (args is ToastNotificationActivatedEventArgs toast) {
                 List<string> parameter_sets = toast.Argument.Split(";").ToList();
                 Dictionary<string, string> arguments = new Dictionary<string, string>();
@@ -115,10 +135,15 @@ namespace Box_Task_Manager
                 }
                 if(arguments.TryGetValue("task_id", out string task_id)) {
                     BoxTask task = await Main.Client.TasksManager.GetTaskAsync(task_id);
-                    Locator.Instance.TaskDetail = new TaskEntry {
+                    TaskEntry taskEntry = null;
+                    foreach (TaskEntry existing_task in Locator.Instance.Tasks) {
+                        if (existing_task.Task.Id == task_id) taskEntry = existing_task;
+                    }
+                    if(taskEntry is null) taskEntry = new TaskEntry {
                         Task = task
                     };
-                    rootFrame.Navigate(typeof(DocumentView));
+                    Locator.Instance.TaskDetail = taskEntry;
+                    rootFrame.Navigate(typeof(DualView));
                 }
             }
             

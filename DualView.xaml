@@ -6,10 +6,14 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    Loaded="DualView_Loaded"
+    SizeChanged="Page_SizeChanged"
+    LayoutUpdated="Page_LayoutUpdated">
 
     <Page.Resources>
-        <local:HideIfNull x:Key="HideIfNull"/>
+        <local:HideIfEmpty x:Key="HideIfEmpty"/>
+        <local:ShowIfZero x:Key="ShowIfZero"/>
         <local:LastItem x:Key="LastItem"/>
 
     </Page.Resources>
@@ -17,16 +21,15 @@
     <Grid Margin="5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="450"/>
-            <ColumnDefinition/>
+            <ColumnDefinition MinWidth="450"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition/>
             <RowDefinition Height="50"/>
         </Grid.RowDefinitions>
-        <ScrollViewer Grid.Row="0" Grid.Column="0" Name="NavigationScrollArea">
+        <ScrollViewer Grid.Row="0" Grid.Column="0" Name="NavigationScrollArea" DataContext="{Binding Source={StaticResource Locator}, Path=Instance}">
             <ListView 
-                ItemsSource="{Binding Source={StaticResource Locator}, 
-                Path=Instance.Tasks, Mode=TwoWay}" 
+                ItemsSource="{Binding Tasks, Mode=TwoWay}" 
                 Name="CurrentTaskList" 
                 IsItemClickEnabled="False" 
                 IsMultiSelectCheckBoxEnabled="False" 
@@ -35,7 +38,10 @@
                 SingleSelectionFollowsFocus="True">
                 
                 <ListView.Header>
-                    <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource TitleTextBlockStyle}" Visibility="{Binding Tasks.Count, Converter={StaticResource ShowIfZero}}" Margin="0,0,10,0">
+                            Loading
+                        </TextBlock>
                         <TextBlock Style="{StaticResource TitleTextBlockStyle}">
                             Open Tasks
                         </TextBlock>
@@ -116,7 +122,7 @@
                                     <ColumnDefinition/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,5,0">
-                                    Due Date
+                                    Due On
                                 </TextBlock>
                                 <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Bottom">
                                     <Run FontWeight="SemiBold" Text="{Binding Task.DueAt, TargetNullValue='Unspecified'}"/>
@@ -125,11 +131,6 @@
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>
-                <ListView.Footer>
-                    <TextBlock>Loading Tasks</TextBlock>
-                    
-                    
-                </ListView.Footer>
             </ListView>
         </ScrollViewer>
         <Grid Grid.Row="0" Grid.Column="1" 
@@ -148,11 +149,42 @@
                 <RowDefinition/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource HeaderTextBlockStyle}" TextWrapping="NoWrap">
+            <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="0,0,0,1" Padding="5" >
+                <TextBlock Style="{StaticResource HeaderTextBlockStyle}" TextWrapping="NoWrap">
                 &gt;<Run Text="{Binding Task.Message, FallbackValue='Select a Task to View Detail'}"/>
-            </TextBlock>
+                </TextBlock>
+            </Border>
+            
 
-            <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Bottom">
+            <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Bottom" Visibility="{Binding Task, Converter={StaticResource HideIfEmpty}}">
+                <Border>
+                    <ListView ItemsSource="{Binding Assignments}" IsItemClickEnabled="False" SelectionMode="None">
+                        <ListView.Header>
+                            <TextBlock Style="{StaticResource SubtitleTextBlockStyle}">
+                                    Assignment Status
+                            </TextBlock>
+                        </ListView.Header>
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource ButtonBorderThemeBrush}"/>
+                                <Setter Property="CornerRadius" Value="3"/>
+                                <Setter Property="Margin" Value="5"/>
+                                <Setter Property="Padding" Value="5"/>
+                                <Setter Property="MinHeight" Value="0"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource CaptionTextBlockStyle}"> 
+                                    <Run Text="{Binding AssignedTo.Name}"/>
+                                    : 
+                                    <Run FontWeight="SemiBold" Text="{Binding Status}"/>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Border>
                 <TextBlock Style="{StaticResource SubtitleTextBlockStyle}">File Information</TextBlock>
                 <Border >
                     <Grid Padding="5" Margin="5" BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="1" RowSpacing="5">
@@ -217,7 +249,7 @@
                 </Border>
                 
                 
-                <Border>
+                <Border BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,10">
                     <ListView ItemsSource="{Binding Comments.Entries}">
                         <ListView.Header>
                             <TextBlock Style="{StaticResource SubtitleTextBlockStyle}">Comments</TextBlock>
@@ -247,29 +279,58 @@
                             </DataTemplate>
                         </ListView.ItemTemplate>
                         <ListView.Footer>
-                            <Button Content="Add Comment" Name="AddComment" HorizontalAlignment="Right"/>
+                            <Button Content="Add Comment" Name="AddComment" Margin="0,0,3,0" HorizontalAlignment="Right" Click="AddComment_Click"/>
                         </ListView.Footer>
                     </ListView>
                 </Border>
+
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                    <Button Content="View On Box" Name="BrowserLaunch" Margin="0,10,3,5" HorizontalAlignment="Right" Click="BrowserLaunch_Click"/>
+                    <GridView ItemsSource="{Binding Assignment.Actions}" Margin="0" Padding="0" SelectionMode="None">
+                        <GridView.ItemContainerStyle>
+                            <Style TargetType="GridViewItem">
+                                <Setter Property="Margin" Value="0,0,3,0"/>
+                                <Setter Property="Padding" Value="0"/>
+                            </Style>
+                        </GridView.ItemContainerStyle>
+                        <GridView.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Name}" HorizontalAlignment="Right" Margin="0" Click="Button_Click"/>
+                            </DataTemplate>
+                        </GridView.ItemTemplate>
+                    </GridView>
+                </StackPanel>
 
             </StackPanel>
 
 
             <ScrollViewer Name="Viewport" Grid.Row="1" Grid.Column="0"
-                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" HorizontalAlignment="Center">
-                <GridView HorizontalAlignment="Center" ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False">
+                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" HorizontalAlignment="Center"
+                          Visibility="{Binding Task, Converter={StaticResource HideIfEmpty}}">
+                <GridView Name="PageContainer" HorizontalAlignment="Center" ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False">
                     <GridView.ItemTemplate>
                         <DataTemplate>
                             <Border Background="{StaticResource ButtonDisabledBorderThemeBrush}" BorderThickness="1" CornerRadius="5">
-                                <Image Stretch="UniformToFill" Source="{Binding}" Width="{Binding Value,ElementName=ImageScaleControl}" Margin="5"/>
+                                <Image Stretch="UniformToFill" Source="{Binding}" Width="{Binding Value,ElementName=PageScaleControl}" Margin="5"/>
                             </Border>
                         </DataTemplate>
                     </GridView.ItemTemplate>
                 </GridView>
             </ScrollViewer>
 
-            <Slider Maximum="1000" Value="500" Minimum="200" Name="ImageScaleControl" Grid.Column="0" Grid.Row="2" Margin="5"/>
-
+            <Slider 
+                Visibility="{Binding Task, Converter={StaticResource HideIfEmpty}}" 
+                Maximum="1000" 
+                Value="1000" 
+                Minimum="200" 
+                Name="PageScaleControl" 
+                Grid.Column="0" 
+                Grid.Row="2" 
+                Margin="5" 
+                SizeChanged="PageScaleControl_SizeChanged"/>
+            <Border Grid.Row="2" Grid.Column="1"  BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="0,1,0,0" Padding="0,10,3,5">
+                <Button Name="Logout" Content="Logout" HorizontalAlignment="Right" Click="Logout_Click"/>
+            </Border>
         </Grid>
     </Grid>
 </Page>

@@ -18,12 +18,12 @@ using Windows.UI.Xaml.Navigation;
 
 namespace Box_Task_Manager {
     public sealed partial class AddComment : ContentDialog {
-        public static readonly DependencyProperty CommentBinding = DependencyProperty.Register(
+        public static readonly DependencyProperty CommentProperty = DependencyProperty.Register(
             nameof(Comment), typeof(string), typeof(AddComment), new PropertyMetadata(default(string))
             );
         public string Comment { 
-            get => GetValue(CommentBinding) as string; 
-            set => SetValue(CommentBinding, value); 
+            get => GetValue(CommentProperty) as string; 
+            set => SetValue(CommentProperty, value); 
         }
 
         public AddComment() {

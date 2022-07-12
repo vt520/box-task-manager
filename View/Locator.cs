@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Toolkit.Uwp.Notifications;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -7,6 +8,9 @@ namespace Box_Task_Manager.View {
     public class Locator: Base {
         private static ConcurrentDictionary<Type, Base> _Instances = new ConcurrentDictionary<Type, Base> { };
         private static Locator _Instance;
+
+        public static ConcurrentQueue<EntryToast> ActiveToasts = new ConcurrentQueue<EntryToast> { };
+        
         public Main Main {
             get {
                 return InstanceOf<Main>();
@@ -23,7 +27,7 @@ namespace Box_Task_Manager.View {
         }
 
         public Locator() {
-
+            ToastNotificationManagerCompat.History.Clear();
         }
         private ObservableCollection<TaskEntry> _Tasks;
         public ObservableCollection<TaskEntry> Tasks {

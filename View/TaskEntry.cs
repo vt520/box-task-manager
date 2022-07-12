@@ -18,6 +18,7 @@ using Windows.UI.Xaml.Media.Imaging;
 
 namespace Box_Task_Manager.View {
     public class TaskEntry : Base {
+        private EntryToast Toast;
         protected Assignment _Assignment;
         public Assignment Assignment {
             get { return _Assignment; }
@@ -172,7 +173,10 @@ namespace Box_Task_Manager.View {
         }
         public static StorageFolder Storage { get => ApplicationData.Current.LocalFolder as StorageFolder; }
         public TaskEntry() {
-            
+            Toast = new EntryToast {
+                TaskEntry = this
+            };
+            Toast.Shown = true;
         }
         private class BoxTaskComparator : IEqualityComparer<BoxTaskAssignment> {
             public bool Equals(BoxTaskAssignment x, BoxTaskAssignment y) {
@@ -240,7 +244,8 @@ namespace Box_Task_Manager.View {
             UpdateIcon();
             UpdateComments();
             UpdatePreview();
-            _ = ShowTaskToast();
+            Toast.Shown = true;
+            //_ = ShowTaskToast();
         }
 
         private async void UpdateFile() {
