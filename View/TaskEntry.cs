@@ -102,6 +102,7 @@ namespace Box_Task_Manager.View {
                 UpdatePages();
             }
         }
+        
         protected BoxTask _Task;
         public BoxTask Task {
             get => _Task;
@@ -115,20 +116,24 @@ namespace Box_Task_Manager.View {
                 UpdateAll();
             }
         }
-
-        private void ShowTaskToast() {
+        public Uri PreviewUri { get => new Uri($"{Storage.Path}\\{Task?.Id}_preview.png"); }
+        public Uri IconUri { get => new Uri($"{Storage.Path}\\{Task?.Id}_icon.png"); }
+        private async Task ShowTaskToast() {
             string toast_tag = $"btm_{Task.Id}";
             ToastNotificationManagerCompat.History.Remove(toast_tag);
+
+
+            //Uri test = await Main.Client.FilesManager.Get(Task.Item.Id);
             //Main.Client.FilesManager.GetThumbnailAsync(Task.Item.Id, 1);
             //Application.Current.Resources.TryAdd($"testing/{Task.Item.Id}", Icon);
             new ToastContentBuilder()
                 .AddArgument("task_id", Task.Id)
                 .AddText(Task.Message, hintMaxLines: 1)
                 .AddAttributionText($"Assigned by\n{Task.CreatedBy.Name}")
-
+              
                 .AddText(Comments?.Entries.Last()?.Message)
-                .AddAppLogoOverride(new Uri($"{ApplicationData.Current.LocalFolder.Path}\\{Task.Id}_icon.png"))
-                .AddHeroImage(new Uri($"{ApplicationData.Current.LocalFolder.Path}\\{Task.Id}_icon.png"))
+                .AddAppLogoOverride(IconUri)
+                .AddInlineImage(PreviewUri)
                 .Show(toast => {
                     toast.ExpiresOnReboot = true;
                     toast.SuppressPopup = false;
@@ -165,7 +170,7 @@ namespace Box_Task_Manager.View {
                 OnPropertyChangedAsync();
             }
         }
-
+        public static StorageFolder Storage { get => ApplicationData.Current.LocalFolder as StorageFolder; }
         public TaskEntry() {
             
         }
@@ -235,7 +240,7 @@ namespace Box_Task_Manager.View {
             UpdateIcon();
             UpdateComments();
             UpdatePreview();
-            ShowTaskToast();
+            _ = ShowTaskToast();
         }
 
         private async void UpdateFile() {
@@ -282,7 +287,7 @@ namespace Box_Task_Manager.View {
 
                 if (ApplicationData.Current.LocalFolder is StorageFolder folder) {
                     try {
-                        Stream output = await folder.OpenStreamForWriteAsync($"{Task.Id}_icon.png", CreationCollisionOption.ReplaceExisting);
+                        Stream output = await folder.OpenStreamForWriteAsync(Path.GetFileName(IconUri.LocalPath), CreationCollisionOption.ReplaceExisting);
                         buffer.Position = 0;
                         buffer.CopyTo(output);
                         output.Close();
@@ -324,12 +329,18 @@ namespace Box_Task_Manager.View {
                 if (representation_stream is Stream) {
                     await representation_stream.CopyToAsync(buffer);
                     Document = await PdfDocument.LoadFromStreamAsync(buffer.AsRandomAccessStream());
+
+                    // Create file
+
+
                     PdfPage preview_page = Document.GetPage(0);
                     InMemoryRandomAccessStream draw_buffer = new InMemoryRandomAccessStream();
-
-
+                    StorageFile preview_file = await Storage.CreateFileAsync(Path.GetFileName(PreviewUri.LocalPath), CreationCollisionOption.ReplaceExisting);
+                    IRandomAccessStream preview_file_buffer = await preview_file.OpenAsync(FileAccessMode.ReadWrite);
                     await preview_page.RenderToStreamAsync(draw_buffer);
-
+                    await preview_page.RenderToStreamAsync(preview_file_buffer);
+                    preview_file_buffer.Dispose();
+                    
 
 
                     BitmapImage preview = new BitmapImage();
@@ -347,9 +358,16 @@ namespace Box_Task_Manager.View {
                 if(_Comments == value) return;
                 _Comments = value;
                 OnPropertyChangedAsync();
+                OnPropertyChangedAsync(nameof(LastComment));
             }
         }
-
+        public BoxComment LastComment {
+            get {
+                if (Comments?.Entries?.Count is null) return null;
+                if (Comments.Entries.Count < 1) return null;
+                return Comments.Entries.Last();
+            }
+        }
         public bool Completed { 
             get {
                 if (!Task.IsCompleted) {

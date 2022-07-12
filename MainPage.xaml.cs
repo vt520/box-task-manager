@@ -24,7 +24,7 @@ namespace Box_Task_Manager
         {
             
             this.InitializeComponent();
-                _Main = Locator.Main;
+                _Main = Locator.Instance.Main;
 
             this.Loading += MainPage_Loading;
             this.Loaded += MainPage_Loaded;
@@ -48,6 +48,8 @@ namespace Box_Task_Manager
         private void DoValidateReady() {
             if (!_Main.Ready) {
                 oauth.GetAuthCode(Main.Config.AuthCodeUri, Main.Config.RedirectUri);
+            } else {
+                Frame.Navigate(typeof(DualView));
             }
         }
 
@@ -65,7 +67,7 @@ namespace Box_Task_Manager
 
         private void ListView_ItemClick(object sender, ItemClickEventArgs e) {
             if (e.ClickedItem is TaskEntry entry) {
-                Locator.TaskDetail = entry;
+                Locator.Instance.TaskDetail = entry;
                 Frame.Navigate(typeof(DocumentView));
             }
         }
@@ -104,7 +106,7 @@ namespace Box_Task_Manager
         private void Review_Click(object sender, RoutedEventArgs e) {
             if(e.OriginalSource is Button button) {
                 if(button.DataContext is TaskEntry entry ) {
-                    Locator.TaskDetail = entry;
+                    Locator.Instance.TaskDetail = entry;
                     Frame.Navigate(typeof(DocumentView));
                 }
             }
@@ -118,6 +120,7 @@ namespace Box_Task_Manager
                     Main.Client.Auth.LogoutAsync();
                 });
             }));
+
             prompt.Commands.Add(new UICommand("No", (command) => {
 
             }));

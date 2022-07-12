@@ -115,7 +115,7 @@ namespace Box_Task_Manager
                 }
                 if(arguments.TryGetValue("task_id", out string task_id)) {
                     BoxTask task = await Main.Client.TasksManager.GetTaskAsync(task_id);
-                    Locator.TaskDetail = new TaskEntry {
+                    Locator.Instance.TaskDetail = new TaskEntry {
                         Task = task
                     };
                     rootFrame.Navigate(typeof(DocumentView));

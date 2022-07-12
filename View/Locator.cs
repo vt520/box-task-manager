@@ -1,23 +1,52 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace Box_Task_Manager.View {
-    public class Locator {
+    public class Locator: Base {
         private static ConcurrentDictionary<Type, Base> _Instances = new ConcurrentDictionary<Type, Base> { };
-        public static Main Main {
+        private static Locator _Instance;
+        public Main Main {
             get {
-                return Instance<Main>();
+                return InstanceOf<Main>();
             }
         }
 
-        public static TaskEntry TaskDetail {
+        public TaskEntry TaskDetail {
             get {
-                return Instance<TaskEntry>();
+                return InstanceOf<TaskEntry>();
             } set {
                 _Instances[typeof(TaskEntry)] = value;
+                OnPropertyChangedAsync();
             }
         }
-        public static T Instance<T>() {
+
+        public Locator() {
+
+        }
+        private ObservableCollection<TaskEntry> _Tasks;
+        public ObservableCollection<TaskEntry> Tasks {
+            get {
+                if (_Tasks is null) Tasks = new ObservableCollection<TaskEntry>();
+                return _Tasks;
+            }
+            set {
+                if (_Tasks == value) return;
+                _Tasks = value;
+                OnPropertyChangedAsync();
+            }
+        }
+
+
+
+
+
+        public static Locator Instance {
+            get => _Instance is null ? _Instance = new Locator() : _Instance;
+        }
+
+        public static T InstanceOf<T>() {
             Type type = typeof(T);
             if (!typeof(Base).IsAssignableFrom(type))
                 throw new AccessViolationException($"{type.Name} is not supported.");

@@ -21,20 +21,22 @@ using Windows.ApplicationModel.Core;
 namespace Box_Task_Manager.View {
 
     public class Main : Base {
-        private ConcurrentQueue<BoxTask> _TaskStack = new ConcurrentQueue<BoxTask> { };
-        private ThreadPoolTimer FolderReaderTimer;
+        private bool _IsRefreshingTasks = false;
+        private bool _IsConvertingTasks = false;
+        private bool? _Ready = null;
 
-        private ConcurrentQueue<BoxFile> _FileStack = new ConcurrentQueue<BoxFile> { };
-        private ThreadPoolTimer FileStackTimer;
 
+        private ConcurrentQueue<BoxTask> TaskStack = new ConcurrentQueue<BoxTask> { };
+        private ConcurrentQueue<BoxFile> FileStack = new ConcurrentQueue<BoxFile> { };
         private static Queue<BoxFolder> _Folders = new Queue<BoxFolder> { };
 
+        private ThreadPoolTimer FolderReaderTimer;
+        private ThreadPoolTimer FileStackTimer;
         private DispatcherTimer TaskConverter = new DispatcherTimer() { Interval = new TimeSpan(0, 0, 1) };
         private DispatcherTimer TaskUpdater = new DispatcherTimer() { Interval = new TimeSpan(0, 0, 30) };
 
-        private static object Sync = null;
-        private static string _ClientID = APIConfiguration.Instance.Client_ID;
-        private static string _ClientSecret = APIConfiguration.Instance.Client_Secret;
+        private static string ClientID = APIConfiguration.Instance.Client_ID;
+        private static string ClientSecret = APIConfiguration.Instance.Client_Secret;
         public Uri RedirectUri = new Uri(APIConfiguration.Instance.Redirect_URL);
 
         
@@ -42,22 +44,14 @@ namespace Box_Task_Manager.View {
         public static BoxConfig Config { get; set; }
         public static BoxClient Client { get; set; }
         public bool Connected { get; set; }
-        private ObservableCollection<TaskEntry> _Tasks;
-        public ObservableCollection<TaskEntry> Tasks { 
-            get {
-                if (_Tasks is null) Tasks = new ObservableCollection<TaskEntry>();
-                return _Tasks;
-            }
-            set {
-                if (_Tasks == value) return;
-                _Tasks = value;
-                OnPropertyChangedAsync();
-            } 
-        }
+
+        public ObservableCollection<TaskEntry> Tasks { get => Locator.Instance.Tasks; }
+
+
         private string _Status = "Waiting to Read Task List";
         public string Status {
             get {
-                return $"{Tasks.Count()} Tasks Loaded, {_Folders?.Count()} folders and {_FileStack.Count()} files left to check";
+                return $"{Locator.Instance.Tasks.Count()} Tasks Loaded, {_Folders?.Count()} folders and {FileStack.Count()} files left to check";
             }
             set {
                 if (_Status == value) return;
@@ -65,6 +59,7 @@ namespace Box_Task_Manager.View {
                 OnPropertyChangedAsync();
             }
         }
+
         public OAuthSession Session {
             get {
                 if (Client?.Auth?.Session is OAuthSession currentOauth) return currentOauth;
@@ -141,11 +136,10 @@ namespace Box_Task_Manager.View {
             //Session = null;
             OAuthSession session = Session; // use appsettings
 
-            Config = new BoxConfig(_ClientID, _ClientSecret, RedirectUri);
+            Config = new BoxConfig(ClientID, ClientSecret, RedirectUri);
             Client = new BoxClient(Config, session);
             Client.Auth.SessionAuthenticated += Auth_SessionAuthenticated;
             Client.Auth.SessionInvalidated += Auth_SessionInvalidated;
-            Tasks = new ObservableCollection<TaskEntry>();
             //Ready = !(session is null);
         }
 
@@ -159,14 +153,14 @@ namespace Box_Task_Manager.View {
             try {
                 Queue<BoxFile> files;
                 (files, _Folders) = await ReadFolder("0");
-                while (files.TryDequeue(out BoxFile file)) _FileStack.Enqueue(file);
+                while (files.TryDequeue(out BoxFile file)) FileStack.Enqueue(file);
                 while (_Folders.TryDequeue(out BoxFolder folder)) {
                     Queue<BoxFolder> subfolders;
                     (files, subfolders) = await ReadFolder(folder.Id);
                     while (files.TryDequeue(out BoxFile file)) {
-                        if (_FileStack.Where(item => item.Id == file.Id).Count() == 0) _FileStack.Enqueue(file);
+                        if (FileStack.Where(item => item.Id == file.Id).Count() == 0) FileStack.Enqueue(file);
                     }
-                    IsScanningFiles |= _FileStack.Count() > 0;
+                    IsScanningFiles |= FileStack.Count() > 0;
                     OnPropertyChangedAsync(nameof(Status));
                     while (subfolders.TryDequeue(out BoxFolder subfolder)) _Folders.Enqueue(subfolder);
                 }
@@ -181,10 +175,10 @@ namespace Box_Task_Manager.View {
             _IsScanningFiles = true;
             try {
                 BoxUser boxUser = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
-                while (_FileStack.TryDequeue(out BoxFile file)) {
+                while (FileStack.TryDequeue(out BoxFile file)) {
                     BoxCollection<BoxTask> file_tasks = await Main.Client.FilesManager.GetFileTasks(file.Id);
                     foreach (BoxTask task in file_tasks.Entries) {
-                        if (_TaskStack.Where(item => item.Id == task.Id).Count() == 0) {
+                        if (TaskStack.Where(item => item.Id == task.Id).Count() == 0) {
                             if (task.IsCompleted) continue;
                             bool all_completed = true;
                             bool partially_completed = false;
@@ -199,12 +193,12 @@ namespace Box_Task_Manager.View {
                             if (!assigned_to_me) continue;
                             if (all_completed) continue;
                             if (partially_completed && task.CompletionRule == BoxCompletionRule.any_assignee) continue;
-                            _TaskStack.Enqueue(task);
+                            TaskStack.Enqueue(task);
                         } else {
                             // duplicate
                         }
                     }
-                    IsConvertingTasks |= _TaskStack.Count() > 0;
+                    IsConvertingTasks |= TaskStack.Count() > 0;
                     OnPropertyChangedAsync(nameof(Status));
                 }
             } catch (Exception exception) {
@@ -225,20 +219,22 @@ namespace Box_Task_Manager.View {
         }
 
         public void ConvertTasksToEntries() {
-            while(_TaskStack.TryDequeue(out BoxTask task)) {
-                if(Tasks.Where(item=>item.Task.Id == task.Id).Count() == 0) {
-                    Tasks.Add(new TaskEntry { Task = task });
+            ObservableCollection<TaskEntry> entries = Locator.Instance.Tasks;
+            while (TaskStack.TryDequeue(out BoxTask task)) {
+                if(entries.Where(item=>item.Task.Id == task.Id).Count() == 0) {
+                    entries.Add(new TaskEntry { Task = task });
                 }
             }
         }
         public async void UpdateTaskEntries() {
-            foreach (TaskEntry task in Tasks) {
+            ObservableCollection<TaskEntry> entries = Locator.Instance.Tasks;
+            foreach (TaskEntry task in entries) {
                 await task.UpdateTask();
             }
 
-            List <TaskEntry> completed = Tasks.Where(item => item.Completed).ToList();
+            List <TaskEntry> completed = entries.Where(item => item.Completed).ToList();
             foreach (TaskEntry task in completed) {
-                Tasks.Remove(task);
+                entries.Remove(task);
             }
         }
         private async Task<(Queue<BoxFile>, Queue<BoxFolder>)> ReadFolder(string folder_id = "0") {
@@ -279,7 +275,6 @@ namespace Box_Task_Manager.View {
                 return Client.Auth.Session.ExpiresIn > 0;
             }
         }
-        private bool _IsRefreshingTasks = false;
         public bool IsRefreshingTasks {
             get {
                 return _IsRefreshingTasks;
@@ -301,7 +296,6 @@ namespace Box_Task_Manager.View {
                 OnPropertyChangedAsync();
             }
         }
-        private bool _IsConvertingTasks = false;
         public bool IsConvertingTasks {
             get {
                 return _IsConvertingTasks ;
@@ -322,7 +316,6 @@ namespace Box_Task_Manager.View {
                 OnPropertyChangedAsync();
             }
         }
-        private bool? _Ready = null;
         public bool Ready { 
             get {
                 if(_Ready is null) return false;
@@ -339,10 +332,10 @@ namespace Box_Task_Manager.View {
                     IsConvertingTasks = false;
                     IsRefreshingTasks = false;
                     _ = DispatchAction(() => {
-                        _FileStack?.Clear();
+                        FileStack?.Clear();
                         _Folders?.Clear();
-                        _TaskStack?.Clear();
-                        Tasks?.Clear();
+                        TaskStack?.Clear();
+                        Locator.Instance.Tasks?.Clear();
                     });
                 }
                 

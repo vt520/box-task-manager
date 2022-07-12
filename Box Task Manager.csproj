@@ -125,13 +125,18 @@
     <Compile Include="Authorize.xaml.cs">
       <DependentUpon>Authorize.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DualView.xaml.cs">
+      <DependentUpon>DualView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Comments.xaml.cs">
       <DependentUpon>Comments.xaml</DependentUpon>
     </Compile>
     <Compile Include="DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="HideIfNullConverter.cs" />
     <Compile Include="IsSingularValueConverter.cs" />
+    <Compile Include="LastItem.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
@@ -173,6 +178,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Authorize.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DualView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
