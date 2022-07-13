@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 
 namespace Box_Task_Manager.View {
     public class Locator: Base {
@@ -17,11 +18,16 @@ namespace Box_Task_Manager.View {
             }
         }
 
+        private TaskEntry _TaskDetail = null;
         public TaskEntry TaskDetail {
             get {
-                return InstanceOf<TaskEntry>();
+                if (_TaskDetail is null) {
+                    TaskDetail = Tasks.FirstOrDefault();
+                }
+                return _TaskDetail;
             } set {
-                _Instances[typeof(TaskEntry)] = value;
+                if (_TaskDetail == value) return;
+                _TaskDetail = value;
                 OnPropertyChangedAsync();
             }
         }
@@ -29,6 +35,7 @@ namespace Box_Task_Manager.View {
         public Locator() {
             ToastNotificationManagerCompat.History.Clear();
         }
+
         private ObservableCollection<TaskEntry> _Tasks;
         public ObservableCollection<TaskEntry> Tasks {
             get {

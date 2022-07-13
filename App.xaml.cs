@@ -1,13 +1,22 @@
 ﻿using Box.V2.Models;
 using Box_Task_Manager.View;
+using Microsoft.Toolkit.Uwp.Notifications;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
+using Windows.ApplicationModel.Core;
+using Windows.ApplicationModel.ExtendedExecution;
 using Windows.Foundation;
 using Windows.Graphics.Display;
 using Windows.Storage;
+using Windows.System;
+using Windows.UI.Core;
+using Windows.UI.Core.Preview;
+using Windows.UI.Popups;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -21,6 +30,36 @@ namespace Box_Task_Manager
     sealed partial class App : Application
     {
         public const string Authorization_Key = "box_auth";
+        public static readonly Main Main = Locator.Instance.Main;
+        protected static ExtendedExecutionSession BackgroundSession = null;
+        public bool BackgroundEnabled {
+            get {
+                return !(BackgroundSession is null);
+            }
+            set {
+                BackgroundSession?.Dispose();
+                if (value) {
+                    _ = CoreApplication.MainView.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () => {
+                        App.BackgroundSession = new ExtendedExecutionSession();
+                        App.BackgroundSession.Reason = ExtendedExecutionReason.Unspecified;
+                        App.BackgroundSession.Description = "Raising periodic toasts";
+                        App.BackgroundSession.Revoked += BackgroundSession_Revoked;
+                        ExtendedExecutionResult result = await BackgroundSession.RequestExtensionAsync();
+
+                        if(result == ExtendedExecutionResult.Denied) {
+                            App.BackgroundSession = null;
+                        }
+                    });
+                } else {
+                    BackgroundSession = null;
+                }
+            }
+        }
+
+        private void BackgroundSession_Revoked(object sender, ExtendedExecutionRevokedEventArgs args) {
+            App.BackgroundSession = null;
+        }
+
         //private stati80
         public static ApplicationDataContainer Configuration { get => Windows.Storage.ApplicationData.Current.LocalSettings; }
         /// <summary>
@@ -36,8 +75,27 @@ namespace Box_Task_Manager
 
             
             this.InitializeComponent();
-            this.Suspending += OnSuspending;
+            Suspending += App_Suspending;
 
+        }
+
+        private void App_Suspending(object sender, SuspendingEventArgs e) {
+            
+        }
+
+        private async void App_CloseRequested(object sender, SystemNavigationCloseRequestedPreviewEventArgs e) {
+            e.Handled = true;
+            await Minimize();
+        }
+        public static async Task Minimize() {
+            IList<AppDiagnosticInfo> information = await AppDiagnosticInfo.RequestInfoForAppAsync();
+            IList<AppResourceGroupInfo> resource_information = information.FirstOrDefault().GetResourceGroups();
+            await resource_information.FirstOrDefault().StartSuspendAsync();
+        }
+
+        private void SystemEvents_SessionEnded(object sender, SessionEndedEventArgs e) {
+            ToastNotificationManagerCompat.History.Clear();
+            App.Current.Exit();
         }
 
         /// <summary>
@@ -47,14 +105,18 @@ namespace Box_Task_Manager
         /// <param name="e">Details about the launch request and process.</param>
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
-            Frame rootFrame = Window.Current.Content as Frame;
 
+            Frame rootFrame = Window.Current.Content as Frame;
+            SystemNavigationManagerPreview.GetForCurrentView().CloseRequested += App_CloseRequested;
             // Do not repeat app initialization when the Window already has content,
             // just ensure that the window is active
             if (rootFrame == null)
             {
                 // Create a Frame to act as the navigation context and navigate to the first page
                 rootFrame = new Frame();
+
+                Main.Ready = Main.IsConnected;
+                if (Main.Ready) Minimize();
 
                 rootFrame.NavigationFailed += OnNavigationFailed;
 
@@ -69,8 +131,10 @@ namespace Box_Task_Manager
 
             if (e?.PrelaunchActivated == false)
             {
+
                 if (rootFrame.Content == null)
                 {
+
                     // When the navigation stack isn't restored navigate to the first page,
                     // configuring the new page by passing required information as a navigation
                     // parameter
@@ -78,14 +142,11 @@ namespace Box_Task_Manager
                 }
                 // Ensure the current window is active
                 Window.Current.Activate();
-                //ApplicationView.GetForCurrentView().;
-                //ApplicationView.PreferredLaunchViewSize = 
-                
-                //ApplicationView.GetForCurrentView().SetPreferredMinSize(new Size(820, 500));
             }
+            BackgroundEnabled = true;
             Maximize();
         }
-        public void Maximize() {
+        public static void Maximize() {
             DisplayInformation resolution = DisplayInformation.GetForCurrentView();
             double conversion = resolution.RawPixelsPerViewPixel;
             Size relativeSize = new Size(0.80, 0.80);
@@ -122,7 +183,8 @@ namespace Box_Task_Manager
         protected override async void OnActivated(IActivatedEventArgs args) {
             OnLaunched(null);
             Frame rootFrame = Window.Current.Content as Frame;
-            if(!Locator.Instance.Main.Ready) {
+            //Locator.Instance.TaskDetail = null; 
+            if (!Main.Ready) {
                 rootFrame.Navigate(typeof(DualView));
             }
             if (args is ToastNotificationActivatedEventArgs toast) {
@@ -134,19 +196,24 @@ namespace Box_Task_Manager
                     arguments[Uri.UnescapeDataString(sections[0])] = Uri.UnescapeDataString(sections[1]);
                 }
                 if(arguments.TryGetValue("task_id", out string task_id)) {
-                    BoxTask task = await Main.Client.TasksManager.GetTaskAsync(task_id);
-                    TaskEntry taskEntry = null;
-                    foreach (TaskEntry existing_task in Locator.Instance.Tasks) {
-                        if (existing_task.Task.Id == task_id) taskEntry = existing_task;
+                    try {
+                        BoxTask task = await Main.Client.TasksManager.GetTaskAsync(task_id);
+                        TaskEntry taskEntry = null;
+                        foreach (TaskEntry existing_task in Locator.Instance.Tasks) {
+                            if (existing_task.Task.Id == task_id) taskEntry = existing_task;
+                        }
+                        if (taskEntry is null) taskEntry = new TaskEntry {
+                            Task = task
+                        };
+                        Locator.Instance.TaskDetail = taskEntry;
+                    } catch (Exception exception) {
+                        Locator.Instance.TaskDetail = null;
+                        await (new MessageDialog(exception.GetType().Name, exception.Message)).ShowAsync();
                     }
-                    if(taskEntry is null) taskEntry = new TaskEntry {
-                        Task = task
-                    };
-                    Locator.Instance.TaskDetail = taskEntry;
-                    rootFrame.Navigate(typeof(DualView));
                 }
             }
-            
+            rootFrame.Navigate(typeof(DualView));
+
             base.OnActivated(args);
         }
     }

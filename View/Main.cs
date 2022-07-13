@@ -48,13 +48,15 @@ namespace Box_Task_Manager.View {
         public ObservableCollection<TaskEntry> Tasks { get => Locator.Instance.Tasks; }
 
 
-        private string _Status = "Waiting to Read Task List";
+        private string _Status = "Initializing";
         public string Status {
             get {
-                return $"{Locator.Instance.Tasks.Count()} Tasks Loaded, {_Folders?.Count()} folders and {FileStack.Count()} files left to check";
+                if(!(_Status is null)) {
+                    return _Status;
+                }
+                return $"{Locator.Instance.Tasks.Count()} Tasks Loaded, {_Folders?.Count()} folders and {FileStack.Count()} files left to check.  Background Processing: {(App.Current as App).BackgroundEnabled}";
             }
             set {
-                if (_Status == value) return;
                 _Status = value;
                 OnPropertyChangedAsync();
             }
@@ -62,6 +64,7 @@ namespace Box_Task_Manager.View {
 
         public OAuthSession Session {
             get {
+                Status = "Validating Session";
                 if (Client?.Auth?.Session is OAuthSession currentOauth) return currentOauth;
 
                 if(App.Configuration.Values["session"] is ApplicationDataCompositeValue stored_oauth) {
@@ -80,6 +83,7 @@ namespace Box_Task_Manager.View {
                 return null;
             }
             set {
+                Status = "Saving Session";
                 App.Configuration.Values.Remove("session");
                 if (value is null) {
                     Ready = false;
@@ -93,6 +97,7 @@ namespace Box_Task_Manager.View {
 
                     App.Configuration.Values.Add("session", stored_oauth);
                 }
+                Status = null;
             }
         }
         
@@ -102,6 +107,7 @@ namespace Box_Task_Manager.View {
             get => _IsScanningFolders | !(FolderReaderTimer is null);
 
             set {
+                Status = $"Configuring Folder Timer {value}";
                 if(IsScanningFolders == value) return;
                 if(value) {
                     FolderReaderTimer = ThreadPoolTimer.CreatePeriodicTimer(FolderReaderTimer_Tick, new TimeSpan(0, 1, 0));
@@ -111,6 +117,7 @@ namespace Box_Task_Manager.View {
                     FolderReaderTimer = null;
                 }
                 _IsScanningFolders = value;
+                Status = null;
             }
         }
 
@@ -118,6 +125,7 @@ namespace Box_Task_Manager.View {
         public bool IsScanningFiles {
             get => _IsScanningFiles | !(FileStackTimer is null);
             private set {
+                Status = "Configuring File Timer";
                 if(IsScanningFiles == value) return;
                 if(value) {
                     FileStackTimer = ThreadPoolTimer.CreatePeriodicTimer(FileStackTimer_Tick, new TimeSpan(0, 15, 0));
@@ -141,7 +149,7 @@ namespace Box_Task_Manager.View {
             Client = new BoxClient(Config, session);
             Client.Auth.SessionAuthenticated += Auth_SessionAuthenticated;
             Client.Auth.SessionInvalidated += Auth_SessionInvalidated;
-            //Ready = !(session is null);
+            Status = "Main Finished";
         }
 
         private void TaskUpdater_Tick(object sender, object e) {
@@ -151,6 +159,7 @@ namespace Box_Task_Manager.View {
         private async void FolderReaderTimer_Tick(ThreadPoolTimer timer) {
             if (_IsScanningFolders) return;
             _IsScanningFolders = true;
+            Status = "Reading Files";
             try {
                 Queue<BoxFile> files;
                 (files, _Folders) = await ReadFolder("0");
@@ -162,7 +171,7 @@ namespace Box_Task_Manager.View {
                         if (FileStack.Where(item => item.Id == file.Id).Count() == 0) FileStack.Enqueue(file);
                     }
                     IsScanningFiles |= FileStack.Count() > 0;
-                    OnPropertyChangedAsync(nameof(Status));
+                    Status = null;
                     while (subfolders.TryDequeue(out BoxFolder subfolder)) _Folders.Enqueue(subfolder);
                 }
             } catch (Exception exception) {
@@ -174,6 +183,7 @@ namespace Box_Task_Manager.View {
         private async void FileStackTimer_Tick(ThreadPoolTimer timer) {
             if (_IsScanningFiles) return;
             _IsScanningFiles = true;
+            Status = "Reading Folders";
             try {
                 BoxUser boxUser = await Main.Client.UsersManager.GetCurrentUserInformationAsync();
                 while (FileStack.TryDequeue(out BoxFile file)) {
@@ -200,7 +210,7 @@ namespace Box_Task_Manager.View {
                         }
                     }
                     IsConvertingTasks |= TaskStack.Count() > 0;
-                    OnPropertyChangedAsync(nameof(Status));
+                    Status = null;
                 }
             } catch (Exception exception) {
                 Debug.WriteLine(exception.Message);
@@ -209,6 +219,7 @@ namespace Box_Task_Manager.View {
         }
 
         private void Auth_SessionInvalidated(object sender, EventArgs e) {
+            Status = "Logging Out";
             Session = null;
             Ready = false;
             
@@ -216,6 +227,7 @@ namespace Box_Task_Manager.View {
         }
 
         private void Auth_SessionAuthenticated(object sender, SessionAuthenticatedEventArgs e) {
+            Status = "Session Authorized";
             Session = e.Session;
         }
 
@@ -229,32 +241,41 @@ namespace Box_Task_Manager.View {
         }
         public async void UpdateTaskEntries() {
             ObservableCollection<TaskEntry> entries = Locator.Instance.Tasks;
-            foreach (TaskEntry task in entries) {
-                await task.UpdateTask();
-            }
-
+            
             List <TaskEntry> completed = entries.Where(item => item.Completed).ToList();
             foreach (TaskEntry task in completed) {
+                task.Toast.Shown = false;
                 entries.Remove(task);
             }
+            foreach (TaskEntry task in entries) {
+                await task.UpdateTask();
+                task.Toast.Shown = true;
+            }
+
         }
         private async Task<(Queue<BoxFile>, Queue<BoxFolder>)> ReadFolder(string folder_id = "0") {
-            BoxCollection<BoxItem> search = await Client.FoldersManager.GetFolderItemsAsync(folder_id, 100);
-            Queue<BoxFile> files = new Queue<BoxFile>();
-            Queue<BoxFolder> folders = new Queue<BoxFolder>();
-            foreach (BoxItem item in search.Entries) {
-                switch (item.Type) {
-                    case "file":
-                        files.Enqueue(item as BoxFile);
-                        break;
-                    case "folder":
-                        folders.Enqueue(item as BoxFolder);
-                        break;
+            try {
+                BoxCollection<BoxItem> search = await Client.FoldersManager.GetFolderItemsAsync(folder_id, 100);
+                Queue<BoxFile> files = new Queue<BoxFile>();
+                Queue<BoxFolder> folders = new Queue<BoxFolder>();
+                foreach (BoxItem item in search.Entries) {
+                    switch (item.Type) {
+                        case "file":
+                            files.Enqueue(item as BoxFile);
+                            break;
+                        case "folder":
+                            folders.Enqueue(item as BoxFolder);
+                            break;
+                    }
                 }
+                return (files, folders);
+
+            } catch (Exception e) {
+                throw e;
             }
-            return (files, folders);
         }
         public async Task Init(string access_code) {
+            Status = "Initializing Application";
             try {
                 await Client.Auth.AuthenticateAsync(access_code);
                 Session = Client.Auth.Session;
@@ -323,10 +344,13 @@ namespace Box_Task_Manager.View {
                 return _Ready.Value & IsConnected;
             }
             set {
+                Status = $"Configuring Ready State of {value}";
                 if (_Ready == value) return;
                 if (value) {
+                    Status = "Setting Up Timers";
                     IsScanningFolders = true;
                     IsRefreshingTasks = true;
+                    Status = $"Timers {IsScanningFiles} {IsScanningFolders}";
                 } else {
                     IsScanningFiles = false;
                     IsScanningFolders = false;

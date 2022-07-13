@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.ApplicationModel.Core;
+using Windows.ApplicationModel.ExtendedExecution;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.UI.Core;
@@ -28,25 +29,13 @@ namespace Box_Task_Manager {
     /// </summary>
     public sealed partial class DualView : Page {
 
-        private Main _Main = Locator.Instance.Main;
         public DualView() {
             this.InitializeComponent();
             Locator.Instance.PropertyChanged += Instance_PropertyChanged;
-            _Main.Ready = _Main.IsConnected;
         }
         
         private void DualView_Loaded(object sender, RoutedEventArgs e) {
-            if(!_Main.Ready) {
-                OauthDialog dialog = new OauthDialog();
-                dialog.Authorized += async (source, authorized) => {
-                    await _Main.Init(authorized.AuthCode);
-                };
-                dialog.Abort += (source, evt) => {
-                    App.Current.Exit();
-                };
-                _ = dialog.ShowAsync();
-                return;
-            }
+
             
             Locator.Instance.OnPropertyChangedAsync(nameof(Locator.Instance.TaskDetail));
         }
@@ -102,12 +91,12 @@ namespace Box_Task_Manager {
         }
 
 
-        private void Logout_Click(object sender, RoutedEventArgs e) {
-
+        private  void Logout_Click(object sender, RoutedEventArgs e) {
+            
             MessageDialog prompt = new MessageDialog("Are you sure you want to log out?");
             prompt.Commands.Add(new UICommand("Yes", (command) => {
                 _ = CoreApplication.MainView.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => {
-                    Locator.Instance.Main.Session = null;
+                    App.Main.Session = null;
                     ToastNotificationManagerCompat.History.Clear();
                     App.Current.Exit();
                 });
@@ -148,7 +137,7 @@ namespace Box_Task_Manager {
 
         private async void ActAndNavigate(Command action) {
             await CoreApplication.MainView.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => {
-                Frame.Navigate(typeof(MainPage));
+                Frame.Navigate(typeof(DualView));
                 action.Execute(this);
 
             });
@@ -161,6 +150,20 @@ namespace Box_Task_Manager {
                        new Uri($"https://app.box.com/file/{task.Task.Item.Id}")
                    );
                 }
+            }
+        }
+
+        private void Page_Loading(FrameworkElement sender, object args) {
+            if (!App.Main.Ready) {
+                OauthDialog dialog = new OauthDialog();
+                dialog.Authorized += async (source, authorized) => {
+                    await App.Main.Init(authorized.AuthCode);
+                };
+                dialog.Abort += (source, evt) => {
+                    App.Current.Exit();
+                };
+                _ = dialog.ShowAsync();
+                return;
             }
         }
     }

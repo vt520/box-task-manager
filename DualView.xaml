@@ -8,6 +8,7 @@
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     Loaded="DualView_Loaded"
+    Loading="Page_Loading"
     SizeChanged="Page_SizeChanged"
     LayoutUpdated="Page_LayoutUpdated">
 
@@ -24,8 +25,9 @@
             <ColumnDefinition MinWidth="450"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="50"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <ScrollViewer Grid.Row="0" Grid.Column="0" Name="NavigationScrollArea" DataContext="{Binding Source={StaticResource Locator}, Path=Instance}">
             <ListView 
@@ -332,5 +334,8 @@
                 <Button Name="Logout" Content="Logout" HorizontalAlignment="Right" Click="Logout_Click"/>
             </Border>
         </Grid>
+        <Border Grid.Row="2" Grid.ColumnSpan="2" Grid.Column="0" BorderBrush="{StaticResource ButtonDisabledBorderThemeBrush}" DataContext="{Binding Source={StaticResource Locator}, Path=Instance.Main}" BorderThickness="0.75">
+            <TextBlock Text="{Binding Status}" TextAlignment="Right"/>
+        </Border>
     </Grid>
 </Page>

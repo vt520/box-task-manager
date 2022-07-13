@@ -18,7 +18,7 @@ using Windows.UI.Xaml.Media.Imaging;
 
 namespace Box_Task_Manager.View {
     public class TaskEntry : Base {
-        private EntryToast Toast;
+        public EntryToast Toast;
         protected Assignment _Assignment;
         public Assignment Assignment {
             get { return _Assignment; }
@@ -109,6 +109,15 @@ namespace Box_Task_Manager.View {
             get => _Task;
             set {
                 if (_Task == value) return;
+                if (Task is BoxTask && value is BoxTask) {
+                    bool id_match = (Task.Id == value.Id);
+                    bool action_match = (Task.Action == value.Action);
+                    bool completed_match = (Task.IsCompleted == value.IsCompleted);
+                    bool rule_match = (Task.CompletionRule == value.CompletionRule);
+                    bool assignment_count_match = (Task.TaskAssignments.Entries.Count == value.TaskAssignments.Entries.Count);
+                    bool due_match = (Task.DueAt == value.DueAt);
+                    if (id_match && action_match && completed_match && rule_match && assignment_count_match && due_match) return;
+                }
                 _Task = value;
                 OnPropertyChangedAsync();
 
@@ -244,7 +253,7 @@ namespace Box_Task_Manager.View {
             UpdateIcon();
             UpdateComments();
             UpdatePreview();
-            Toast.Shown = true;
+            
             //_ = ShowTaskToast();
         }
 
@@ -387,7 +396,16 @@ namespace Box_Task_Manager.View {
                 }
                 ToastNotificationManagerCompat.History.Remove($"btm_{Task.Id}");
                 return true;
-            } 
+            }
+            set {
+                if(value) {
+                    Toast.Shown = false;
+                    Locator.Instance.Tasks.Remove(this);
+                    if(Locator.Instance.TaskDetail == this) {
+                        Locator.Instance.TaskDetail = Locator.Instance.Tasks.FirstOrDefault();
+                    }
+                }
+            }
         }
     }
 }

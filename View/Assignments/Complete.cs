@@ -14,6 +14,12 @@ namespace Box_Task_Manager.View.Assignments {
                     Id = BoxTaskAssignment.Id,
                     ResolutionState = ResolutionStateType.completed
                 });
+                IEnumerable<TaskEntry> existing_tasks = Locator.Instance.Tasks.ToList();
+                foreach (TaskEntry task in existing_tasks) {
+                    if (task.Assignments.Where(assignment => assignment.Id == BoxTaskAssignment.Id).Any()) {
+                        task.Completed = true;
+                    }
+                }
             } catch (Exception exception) {
                 await (new MessageDialog(exception.Message)).ShowAsync();
                 return;

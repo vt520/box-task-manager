@@ -10,25 +10,31 @@ using Windows.UI.Notifications;
 
 namespace Box_Task_Manager.View {
     public class EntryToast : Base {
+        //private ToastNotifier ToastNotifier;
         private bool _Shown = false;
         public bool Shown {
             get {
                 return _Shown & !Dirty;
             }
             set {
-                if (_Shown == value) return;
-                if(!value) {
-                    ToastNotificationManager.History.Remove(Tag);
+                if (value == false) {
+                    if (!(Tag is null)) ToastNotificationManagerCompat.History.Remove(Tag);
+                    if(ToastNotification is ToastNotification notification)  ToastNotifier.Hide(notification);
                     _Shown = false;
                 } else {
-                    if (Dirty) {
-                        ToastNotification = null;
-                    }
+                    if (_Shown) return;
+//                    ToastNotificationManager.History.Remove(Tag);
+                    ToastNotification = null;
                     if (ToastNotification is ToastNotification notification) {
-                        ToastNotificationManagerCompat.CreateToastNotifier().Show(notification);
-                        //ToastNotifier.Show(ToastNotification);
+                        
+                        notification.Dismissed += (source, e) => {
+                            
+                        };
+                        notification.Activated += (source, e) => {
+                            Shown = false;
+                        };
+                        ToastNotifier.Show(notification);
                     } else return;
-
                     _Shown = true;
                 }
             }
@@ -52,6 +58,7 @@ namespace Box_Task_Manager.View {
         public string Tag {
             get {
                 if(TaskEntry is null) return null;
+                if (TaskEntry.Task is null) return null;
                 return $"task_{TaskEntry.Task.Id}";
             }
         }
@@ -71,7 +78,9 @@ namespace Box_Task_Manager.View {
         }
 
         public bool Dirty {
-            get => !ToastContentMatchesTask;
+            get {
+                return !ToastContentMatchesTask;
+            }
             set {
                 if (!value) return;
                 ToastContentMatchesTask = false;
@@ -90,7 +99,7 @@ namespace Box_Task_Manager.View {
             }
             protected set {
                 if (_ToastNotification == value) return;
-                if (value is null && _ToastNotification is ToastNotification) {
+                if (value is null && ToastNotification is ToastNotification) {
                     ToastNotificationManager.History.Remove(Tag);
                     ToastContent = null;
                 }
@@ -101,7 +110,9 @@ namespace Box_Task_Manager.View {
         }
         
         public XmlDocument Xml {
-            get => ToastContent?.GetXml();
+            get {
+                return ToastContent?.GetXml();
+            }
         }
         private ToastContent _ToatContent;
         public ToastContent ToastContent { 
@@ -116,7 +127,7 @@ namespace Box_Task_Manager.View {
                         .AddText(TaskEntry.Task.Message, hintMaxLines: 1)
                         .AddAttributionText($"Assigned by\n{TaskEntry.Task.CreatedBy.Name}")
 
-                        .AddText(TaskEntry.Comments?.Entries.Last()?.Message)
+//                        .AddText(TaskEntry.Comments?.Entries?.Last()?.Message)
                         .AddAppLogoOverride(TaskEntry.IconUri)
                         .AddHeroImage(TaskEntry.PreviewUri)
 
@@ -132,13 +143,13 @@ namespace Box_Task_Manager.View {
                 OnPropertyChangedAsync(nameof(Xml));
             }
         }
-        private ToastNotifier _ToastNotifier;
-        public ToastNotifier ToastNotifier {
+        private ToastNotifierCompat _ToastNotifier;
+        public ToastNotifierCompat ToastNotifier {
             get {
                 if (_ToastNotifier is null) {
-                    ToastNotifier = ToastNotificationManager.CreateToastNotifier();
+                    ToastNotifier = ToastNotificationManagerCompat.CreateToastNotifier();
                 }
-                return ToastNotifier;
+                return _ToastNotifier;
             }
             set {
                 _ToastNotifier = value;
