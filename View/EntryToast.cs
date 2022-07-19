@@ -19,7 +19,13 @@ namespace Box_Task_Manager.View {
             set {
                 if (value == false) {
                     if (!(Tag is null)) ToastNotificationManagerCompat.History.Remove(Tag);
-                    if(ToastNotification is ToastNotification notification)  ToastNotifier.Hide(notification);
+                    if (ToastNotification is ToastNotification notification && _Shown) {
+                        try {
+                            ToastNotifier.Hide(notification);
+                        } catch (Exception ex) {
+
+                        }
+                    }
                     _Shown = false;
                 } else {
                     if (_Shown) return;

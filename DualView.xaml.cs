@@ -38,6 +38,7 @@ namespace Box_Task_Manager {
 
             
             Locator.Instance.OnPropertyChangedAsync(nameof(Locator.Instance.TaskDetail));
+            App.Maximize();
         }
 
         private void Instance_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
@@ -59,8 +60,9 @@ namespace Box_Task_Manager {
         }
 
         private void CurrentTaskList_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-
+            
             Locator.Instance.TaskDetail = (sender as ListView).SelectedItem as TaskEntry;
+            App.Maximize();
         }
 
         private void Page_SizeChanged(object sender, SizeChangedEventArgs e) {
@@ -165,6 +167,14 @@ namespace Box_Task_Manager {
                 _ = dialog.ShowAsync();
                 return;
             }
+        }
+
+        private void Grid_Loaded(object sender, RoutedEventArgs e) {
+
+        }
+
+        private void Grid_DataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args) {
+
         }
     }
 }

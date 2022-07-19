@@ -10,8 +10,8 @@
 
   <Identity
     Name="8f5cd344-e79b-4605-934a-61e4b335d041"
-    Publisher="CN=CCES Application Certificate"
-    Version="1.0.5.0" />
+    Publisher="CN=Mark Roduner - CCES"
+    Version="1.0.17.0" />
 
   <mp:PhoneIdentity PhoneProductId="8f5cd344-e79b-4605-934a-61e4b335d041" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

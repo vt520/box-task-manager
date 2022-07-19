@@ -54,7 +54,7 @@ namespace Box_Task_Manager.View {
                 if(!(_Status is null)) {
                     return _Status;
                 }
-                return $"{Locator.Instance.Tasks.Count()} Tasks Loaded, {_Folders?.Count()} folders and {FileStack.Count()} files left to check.  Background Processing: {(App.Current as App).BackgroundEnabled}";
+                return $"{_Folders?.Count()} folders, {FileStack.Count()} files queued for search. (Run In Background: {(App.Current as App).BackgroundEnabled})";
             }
             set {
                 _Status = value;
@@ -107,7 +107,7 @@ namespace Box_Task_Manager.View {
             get => _IsScanningFolders | !(FolderReaderTimer is null);
 
             set {
-                Status = $"Configuring Folder Timer {value}";
+                Status = $"Starting folder scanning: {value}";
                 if(IsScanningFolders == value) return;
                 if(value) {
                     FolderReaderTimer = ThreadPoolTimer.CreatePeriodicTimer(FolderReaderTimer_Tick, new TimeSpan(0, 1, 0));
@@ -125,7 +125,7 @@ namespace Box_Task_Manager.View {
         public bool IsScanningFiles {
             get => _IsScanningFiles | !(FileStackTimer is null);
             private set {
-                Status = "Configuring File Timer";
+                Status = $"Started file scanning: {value}";
                 if(IsScanningFiles == value) return;
                 if(value) {
                     FileStackTimer = ThreadPoolTimer.CreatePeriodicTimer(FileStackTimer_Tick, new TimeSpan(0, 15, 0));
@@ -178,7 +178,6 @@ namespace Box_Task_Manager.View {
                 Debug.WriteLine(exception.Message);
             }
             _IsScanningFolders = false;
-            //if (IsScanningFolders) FolderReaderTimer = ThreadPoolTimer.CreateTimer(FolderReaderTimer_Tick, new TimeSpan(0, 15, 0));
         }
         private async void FileStackTimer_Tick(ThreadPoolTimer timer) {
             if (_IsScanningFiles) return;
@@ -280,6 +279,7 @@ namespace Box_Task_Manager.View {
                 await Client.Auth.AuthenticateAsync(access_code);
                 Session = Client.Auth.Session;
                 Ready = IsConnected;
+                if (Ready) await App.Minimize();
             } catch (Exception exception) {
                 await (new MessageDialog(exception.GetType().Name, exception.Message)).ShowAsync();
             }
@@ -344,10 +344,10 @@ namespace Box_Task_Manager.View {
                 return _Ready.Value & IsConnected;
             }
             set {
-                Status = $"Configuring Ready State of {value}";
+                Status = $"Setting Up: {value}";
                 if (_Ready == value) return;
                 if (value) {
-                    Status = "Setting Up Timers";
+                    Status = "Waiting for changes";
                     IsScanningFolders = true;
                     IsRefreshingTasks = true;
                     Status = $"Timers {IsScanningFiles} {IsScanningFolders}";

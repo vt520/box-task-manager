@@ -10,7 +10,8 @@
     Loaded="DualView_Loaded"
     Loading="Page_Loading"
     SizeChanged="Page_SizeChanged"
-    LayoutUpdated="Page_LayoutUpdated">
+    LayoutUpdated="Page_LayoutUpdated"
+    DataContext="{Binding Instance, Source={StaticResource Locator}}">
 
     <Page.Resources>
         <local:HideIfEmpty x:Key="HideIfEmpty"/>
@@ -19,17 +20,17 @@
 
     </Page.Resources>
 
-    <Grid Margin="5">
+    <Grid Margin="5" >
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="450"/>
             <ColumnDefinition MinWidth="450"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="50"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <ScrollViewer Grid.Row="0" Grid.Column="0" Name="NavigationScrollArea" DataContext="{Binding Source={StaticResource Locator}, Path=Instance}">
+        <ScrollViewer Grid.Row="0" Grid.Column="0" Name="NavigationScrollArea">
             <ListView 
                 ItemsSource="{Binding Tasks, Mode=TwoWay}" 
                 Name="CurrentTaskList" 
@@ -41,8 +42,11 @@
                 
                 <ListView.Header>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Style="{StaticResource TitleTextBlockStyle}" Visibility="{Binding Tasks.Count, Converter={StaticResource ShowIfZero}}" Margin="0,0,10,0">
-                            Loading
+                        <TextBlock 
+                            Style="{StaticResource TitleTextBlockStyle}" 
+                            Visibility="{Binding Tasks.Count, Converter={StaticResource ShowIfZero}}" 
+                            Margin="0,0,10,0">
+                            Searching For
                         </TextBlock>
                         <TextBlock Style="{StaticResource TitleTextBlockStyle}">
                             Open Tasks
@@ -87,7 +91,7 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
                                 <StackPanel Grid.Row="0">
-                                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}">
+                                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" >
                                     <Run Text="{Binding Task.Message}"/>
                                     </TextBlock>
                                     <TextBlock Style="{StaticResource BaseTextBlockStyle}" HorizontalAlignment="Center">
@@ -104,7 +108,7 @@
                                     VerticalAlignment="Bottom"
                                     Margin="5">
                                     <Border BorderBrush="{StaticResource ButtonDisabledBorderThemeBrush}" BorderThickness="0,0,0,1">
-                                        <TextBlock>
+                                        <TextBlock TextWrapping="Wrap">
                                             <Run Text="{Binding Message}"/>
                                         </TextBlock>
                                     </Border>
@@ -135,13 +139,16 @@
                 </ListView.ItemTemplate>
             </ListView>
         </ScrollViewer>
-        <Grid Grid.Row="0" Grid.Column="1" 
-            DataContext="{Binding Source={StaticResource Locator}, Path=Instance.TaskDetail}"
+        <Grid 
+            Name="PreviewContainer"
+            Grid.Row="0" 
+            Grid.Column="1" 
             BorderBrush="{StaticResource ButtonBorderThemeBrush}" 
-            BorderThickness="1"
+            BorderThickness="1,0,0,0"
             ColumnSpacing="5"
             RowSpacing="5"
-            Padding="5">
+            Padding="5"
+            Loaded="Grid_Loaded" DataContextChanged="Grid_DataContextChanged">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
                 <ColumnDefinition Width="250"/>
@@ -151,15 +158,31 @@
                 <RowDefinition/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="0,0,0,1" Padding="5" >
-                <TextBlock Style="{StaticResource HeaderTextBlockStyle}" TextWrapping="NoWrap">
+            
+            <Border 
+                Grid.Row="0" 
+                Grid.Column="0" 
+                Grid.ColumnSpan="2" 
+                BorderBrush="{StaticResource ButtonBorderThemeBrush}" 
+                BorderThickness="0,0,0,1" 
+                Padding="5" 
+                Visibility="{Binding TaskDetail, Converter={StaticResource HideIfEmpty}}">
+                <TextBlock 
+                    DataContext="{Binding TaskDetail}" 
+                    Style="{StaticResource HeaderTextBlockStyle}" 
+                    TextWrapping="NoWrap">
                 &gt;<Run Text="{Binding Task.Message, FallbackValue='Select a Task to View Detail'}"/>
                 </TextBlock>
             </Border>
-            
 
-            <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Bottom" Visibility="{Binding Task, Converter={StaticResource HideIfEmpty}}">
-                <Border>
+
+            <StackPanel 
+                Name="FileDetails"
+                Grid.Row="1" 
+                Grid.Column="1" 
+                VerticalAlignment="Bottom" 
+                Visibility="{Binding TaskDetail, Converter={StaticResource HideIfEmpty}}" >
+                <Border DataContext="{Binding TaskDetail}">
                     <ListView ItemsSource="{Binding Assignments}" IsItemClickEnabled="False" SelectionMode="None">
                         <ListView.Header>
                             <TextBlock Style="{StaticResource SubtitleTextBlockStyle}">
@@ -189,7 +212,13 @@
                 </Border>
                 <TextBlock Style="{StaticResource SubtitleTextBlockStyle}">File Information</TextBlock>
                 <Border >
-                    <Grid Padding="5" Margin="5" BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="1" RowSpacing="5">
+                    <Grid
+                        DataContext="{Binding TaskDetail}"
+                        Padding="5" 
+                        Margin="5" 
+                        BorderBrush="{StaticResource ButtonBorderThemeBrush}" 
+                        BorderThickness="1" 
+                        RowSpacing="5">
 
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition/>
@@ -251,8 +280,8 @@
                 </Border>
                 
                 
-                <Border BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,10">
-                    <ListView ItemsSource="{Binding Comments.Entries}">
+                <Border BorderBrush="{StaticResource ButtonBorderThemeBrush}" DataContext="{Binding TaskDetail}" BorderThickness="0,0,0,1" Padding="0,0,0,10">
+                    <ListView ItemsSource="{Binding Comments}">
                         <ListView.Header>
                             <TextBlock Style="{StaticResource SubtitleTextBlockStyle}">Comments</TextBlock>
                         </ListView.Header>
@@ -286,7 +315,12 @@
                     </ListView>
                 </Border>
 
-                <StackPanel Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                <StackPanel 
+                    Orientation="Vertical" 
+                    HorizontalAlignment="Right" 
+                    VerticalAlignment="Bottom"
+                    DataContext="{Binding TaskDetail}">
+                    
                     <Button Content="View On Box" Name="BrowserLaunch" Margin="0,10,3,5" HorizontalAlignment="Right" Click="BrowserLaunch_Click"/>
                     <GridView ItemsSource="{Binding Assignment.Actions}" Margin="0" Padding="0" SelectionMode="None">
                         <GridView.ItemContainerStyle>
@@ -306,9 +340,15 @@
             </StackPanel>
 
 
-            <ScrollViewer Name="Viewport" Grid.Row="1" Grid.Column="0"
-                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" HorizontalAlignment="Center"
-                          Visibility="{Binding Task, Converter={StaticResource HideIfEmpty}}">
+            <ScrollViewer 
+                Name="Viewport" 
+                Grid.Row="1" 
+                Grid.Column="0"
+                VerticalScrollBarVisibility="Auto" 
+                HorizontalScrollBarVisibility="Disabled" 
+                HorizontalAlignment="Center"
+                DataContext="{Binding TaskDetail}"
+                Visibility="{Binding Pages, Converter={StaticResource HideIfEmpty}}" >
                 <GridView Name="PageContainer" HorizontalAlignment="Center" ItemsSource="{Binding Pages}" SelectionMode="None" IsItemClickEnabled="False">
                     <GridView.ItemTemplate>
                         <DataTemplate>
@@ -320,8 +360,7 @@
                 </GridView>
             </ScrollViewer>
 
-            <Slider 
-                Visibility="{Binding Task, Converter={StaticResource HideIfEmpty}}" 
+            <Slider
                 Maximum="1000" 
                 Value="1000" 
                 Minimum="200" 
@@ -329,13 +368,14 @@
                 Grid.Column="0" 
                 Grid.Row="2" 
                 Margin="5" 
-                SizeChanged="PageScaleControl_SizeChanged"/>
+                SizeChanged="PageScaleControl_SizeChanged"
+                Visibility="{Binding TaskDetail, Converter={StaticResource HideIfEmpty}}" />
             <Border Grid.Row="2" Grid.Column="1"  BorderBrush="{StaticResource ButtonBorderThemeBrush}" BorderThickness="0,1,0,0" Padding="0,10,3,5">
                 <Button Name="Logout" Content="Logout" HorizontalAlignment="Right" Click="Logout_Click"/>
             </Border>
         </Grid>
         <Border Grid.Row="2" Grid.ColumnSpan="2" Grid.Column="0" BorderBrush="{StaticResource ButtonDisabledBorderThemeBrush}" DataContext="{Binding Source={StaticResource Locator}, Path=Instance.Main}" BorderThickness="0.75">
-            <TextBlock Text="{Binding Status}" TextAlignment="Right"/>
+            <TextBlock Text="{Binding Status}" TextAlignment="Left"/>
         </Border>
     </Grid>
 </Page>

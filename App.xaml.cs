@@ -31,7 +31,7 @@ namespace Box_Task_Manager
     {
         public const string Authorization_Key = "box_auth";
         public static readonly Main Main = Locator.Instance.Main;
-        protected static ExtendedExecutionSession BackgroundSession = null;
+        private static ExtendedExecutionSession BackgroundSession = null;
         public bool BackgroundEnabled {
             get {
                 return !(BackgroundSession is null);
@@ -45,7 +45,6 @@ namespace Box_Task_Manager
                         App.BackgroundSession.Description = "Raising periodic toasts";
                         App.BackgroundSession.Revoked += BackgroundSession_Revoked;
                         ExtendedExecutionResult result = await BackgroundSession.RequestExtensionAsync();
-
                         if(result == ExtendedExecutionResult.Denied) {
                             App.BackgroundSession = null;
                         }
@@ -76,8 +75,10 @@ namespace Box_Task_Manager
             
             this.InitializeComponent();
             Suspending += App_Suspending;
-
+            //Window.Current.SetTitleBar( new TextBlock { Text = "Okay" });
+            Window.Current.SizeChanged += Current_SizeChanged;
         }
+
 
         private void App_Suspending(object sender, SuspendingEventArgs e) {
             
@@ -85,6 +86,11 @@ namespace Box_Task_Manager
 
         private async void App_CloseRequested(object sender, SystemNavigationCloseRequestedPreviewEventArgs e) {
             e.Handled = true;
+            Locator.Instance.TaskDetail = null;
+            CoreVirtualKeyStates state = Window.Current.CoreWindow.GetAsyncKeyState(VirtualKey.Control);
+            if((state & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down) {
+                Exit();
+            }
             await Minimize();
         }
         public static async Task Minimize() {
@@ -108,6 +114,8 @@ namespace Box_Task_Manager
 
             Frame rootFrame = Window.Current.Content as Frame;
             SystemNavigationManagerPreview.GetForCurrentView().CloseRequested += App_CloseRequested;
+            Maximize();
+
             // Do not repeat app initialization when the Window already has content,
             // just ensure that the window is active
             if (rootFrame == null)
@@ -115,8 +123,11 @@ namespace Box_Task_Manager
                 // Create a Frame to act as the navigation context and navigate to the first page
                 rootFrame = new Frame();
 
+
                 Main.Ready = Main.IsConnected;
-                if (Main.Ready) Minimize();
+                if (Main.Ready) {
+                    Minimize();
+                }
 
                 rootFrame.NavigationFailed += OnNavigationFailed;
 
@@ -144,17 +155,29 @@ namespace Box_Task_Manager
                 Window.Current.Activate();
             }
             BackgroundEnabled = true;
-            Maximize();
+
+            //            Window.Current.SizeChanged += Current_SizeChanged;
         }
+
+        private void Current_SizeChanged(object sender, WindowSizeChangedEventArgs e) {
+           // throw new NotImplementedException();
+        }
+
         public static void Maximize() {
             DisplayInformation resolution = DisplayInformation.GetForCurrentView();
             double conversion = resolution.RawPixelsPerViewPixel;
             Size relativeSize = new Size(0.80, 0.80);
             Size windowSize = new Size((resolution.ScreenWidthInRawPixels / conversion) * relativeSize.Width, (resolution.ScreenHeightInRawPixels / conversion) * relativeSize.Height);
 
-            ApplicationView.PreferredLaunchViewSize = windowSize;
+            if (Locator.Instance.TaskDetail is null) {
+                windowSize.Height = windowSize.Height / 2;
+                if (windowSize.Height < 700) windowSize.Height = 700;
+                windowSize.Width = 450;
+                ApplicationView.PreferredLaunchViewSize = windowSize;
+                ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
+            }
 
-            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
+            ApplicationView.GetForCurrentView().TryResizeView(windowSize);
             ApplicationView.GetForCurrentView().SetPreferredMinSize(windowSize);
         }
         /// <summary>
@@ -205,6 +228,7 @@ namespace Box_Task_Manager
                         if (taskEntry is null) taskEntry = new TaskEntry {
                             Task = task
                         };
+                        // maybe be more selective?
                         Locator.Instance.TaskDetail = taskEntry;
                     } catch (Exception exception) {
                         Locator.Instance.TaskDetail = null;

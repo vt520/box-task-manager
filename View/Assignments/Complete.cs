@@ -20,6 +20,7 @@ namespace Box_Task_Manager.View.Assignments {
                         task.Completed = true;
                     }
                 }
+                if (Locator.Instance.Tasks.Count == 0) await App.Minimize();
             } catch (Exception exception) {
                 await (new MessageDialog(exception.Message)).ShowAsync();
                 return;
