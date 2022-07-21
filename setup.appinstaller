@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<AppInstaller
+	Uri="https://apps.haxbits.org/btm-cces/Box Task Manager.appinstaller"
+	Version="1.0.17.0" xmlns="http://schemas.microsoft.com/appx/appinstaller/2017/2">
+	<MainBundle
+		Name="8f5cd344-e79b-4605-934a-61e4b335d041"
+		Version="1.0.17.0"
+		Publisher="CN=Mark Roduner - CCES"
+		Uri="https://apps.haxbits.org/btm-cces/Box Task Manager_1.0.17.0_Test/Box Task Manager_1.0.17.0_x64.msixbundle" />
+	<Dependencies>
+		<Package
+			Name="Microsoft.UI.Xaml.2.7"
+			Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+			ProcessorArchitecture="x64"
+			Uri="https://apps.haxbits.org/btm-cces/Box Task Manager_1.0.17.0_Test/Dependencies/x64/Microsoft.UI.Xaml.2.7.appx"
+			Version="7.2203.17001.0" />
+		<Package
+			Name="Microsoft.NET.CoreRuntime.2.2"
+			Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+			ProcessorArchitecture="x64"
+			Uri="https://apps.haxbits.org/btm-cces/Box Task Manager_1.0.17.0_Test/Dependencies/x64/Microsoft.NET.CoreRuntime.2.2.appx"
+			Version="2.2.30527.2" />
+		<Package
+			Name="Microsoft.NET.CoreFramework.Debug.2.2"
+			Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+			ProcessorArchitecture="x64"
+			Uri="https://apps.haxbits.org/btm-cces/Box Task Manager_1.0.17.0_Test/Dependencies/x64/Microsoft.NET.CoreFramework.Debug.2.2.appx"
+			Version="2.2.30316.1" />
+		<Package
+			Name="Microsoft.VCLibs.140.00"
+			Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+			ProcessorArchitecture="x64"
+			Uri="https://apps.haxbits.org/btm-cces/Box Task Manager_1.0.17.0_Test/Dependencies/x64/Microsoft.VCLibs.x64.14.00.appx"
+			Version="14.0.30704.0" />
+	</Dependencies>
+	<UpdateSettings>
+		<OnLaunch
+			HoursBetweenUpdateChecks="0" />
+	</UpdateSettings>
+</AppInstaller>
