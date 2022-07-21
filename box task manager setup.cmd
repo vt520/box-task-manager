@@ -46,8 +46,6 @@ echo Running Setup Script
 powershell -File installer.ps1
 popd
 
-pause
-
 exit /B
 
 :heredoc <uniqueIDX>
