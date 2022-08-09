@@ -24,7 +24,7 @@ namespace Box_Task_Manager.View {
             );
         }
         protected virtual void Execute(ICommand command) {
-            command.Execute(command);
+            command.Execute(this);
         }
 
     }
